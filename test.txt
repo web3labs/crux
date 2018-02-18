@@ -1,0 +1,11 @@
+curl -X GET http://localhost:8000/upcheck
+
+
+curl -d '{"payload":"bWVzc2FnZSBwYXlsb2FkMQ==","from":"BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=","to":["QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc="]}' -H "Content-Type: application/json" -X POST http://localhost:8000/send
+
+{"key":"2VkkgxUczjCz4XBYMxjfD117dLr+gn/4W+EBMhlhSoaUKCVPBSHXrl2J7Gl/YLWLFvSBEZyF38U="}
+
+
+curl -d '{"key":"jEGeb6i9CCxck98yPWcbsWjz6mYyY6p84NrIMHKlWPCzde2eyRnqE2L0FCa2+pp59FneIzjJbvurZ6J+yO1ZWw==","to":"QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc="}' -H "Content-Type: application/json" -X POST http://localhost:8000/receive
+
+leveldbutil dump ~/code/go/blk-io/tmp/crux.db/000001.log

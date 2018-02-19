@@ -9,7 +9,12 @@ import (
 )
 
 func main() {
-	enc := enclave.Enclave{Db : storage.Init("/Users/Conor/code/go/blk-io/tmp/crux.db")}
+	db, err := storage.Init("/Users/Conor/code/go/blk-io/tmp/crux.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	enc := enclave.Enclave{Db : db}
 
 	// TODO: Read key from configuration & add command line tool to generate
 	tm := server.TransactionManager{Key : enclave.NewKey(), Enclave : enc}
@@ -21,5 +26,5 @@ func main() {
 	http.HandleFunc("/receive", tm.Receive)
 	log.Fatal(http.ListenAndServe("localhost:8000", nil))
 
-	// TODO: Add support for propogation methods
+	// TODO: Add support for propagation methods
 }

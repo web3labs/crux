@@ -7,32 +7,27 @@ type levelDb struct {
 	conn   *leveldb.DB
 }
 
-func Init(dbPath string) *levelDb {
+func Init(dbPath string) (*levelDb, error) {
 	db := new(levelDb)
 	db.dbPath = dbPath
 	var err error
 	db.conn, err = leveldb.OpenFile(dbPath, nil)
-	if err != nil {
-		panic(err)
-	}
-	return db
+	return db, err
 }
 
-func (db *levelDb) Write(key *[]byte, value *[]byte) {
-	err := db.conn.Put(*key, *value, nil)
-	if err != nil {
-		panic(err)
-	}
+func (db *levelDb) Write(key *[]byte, value *[]byte) error {
+	return db.conn.Put(*key, *value, nil)
 }
 
-func (db *levelDb) Read(key *[]byte) *[]byte {
+func (db *levelDb) Read(key *[]byte) (*[]byte, error) {
 	value, err := db.conn.Get(*key, nil)
-	if err != nil {
-		panic(err)
+	if err == nil {
+		return &value, err
+	} else {
+		return nil, err
 	}
-	return &value
 }
 
-func (db *levelDb) Delete(key *[]byte) {
-	db.conn.Delete(*key, nil)
+func (db *levelDb) Delete(key *[]byte) error {
+	return db.conn.Delete(*key, nil)
 }

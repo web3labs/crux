@@ -1,7 +1,7 @@
 package storage
 
 type DataStore interface {
-	Write(key *[]byte, value *[]byte)
-	Read(key *[]byte) *[]byte
-	Delete(key *[]byte)
+	Write(key *[]byte, value *[]byte) error
+	Read(key *[]byte) (*[]byte, error)
+	Delete(key *[]byte) error
 }

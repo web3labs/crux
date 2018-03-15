@@ -16,7 +16,7 @@ type TransactionManager struct {
 }
 
 func (s *TransactionManager) Upcheck(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprintf(w, "I'm up!")
+	fmt.Fprint(w, "I'm up!")
 }
 
 func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
@@ -28,7 +28,7 @@ func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			decodeError(w, req, "payload", sendReq.Payload, err)
 		} else {
-			key, err := s.Enclave.Store(s.Key, &payload)
+			key, err := s.Enclave.Store(&payload)
 			if err != nil {
 				badRequest(w,
 					fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
@@ -83,6 +83,11 @@ func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 	}
+}
+
+func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
+	payload := make([]byte, 256)
+	req.Body.Read(payload)
 }
 
 func invalidBody(w http.ResponseWriter, req *http.Request, err error) {

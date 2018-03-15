@@ -8,34 +8,36 @@ import (
 const configFile = "config_testdata.conf"
 
 func TestLoadConfig(t *testing.T) {
-	conf, err := LoadConfig(configFile)
+	err := LoadConfig(configFile)
 
 	if err != nil {
 		t.Fatalf("Unable to load config file: %s, %s", configFile, err)
 	}
 
+	conf := AllSettings()
+
 	expected := map[string]interface{}{
-		"verbosity": 1,
-		"alwayssendto": []interface{}{},
-		"tlsserverchain": []interface{}{},
-		"storage": "dir:storage",
-		"workdir": "data",
-		"url": "http://127.0.0.1:9001/",
-		"tlsservertrust": "tofu",
-		"publickeys": [1]string{"foo.pub"},
-		"othernodes": [1]string{"http://127.0.0.1:9000/"},
-		"tlsknownservers":"tls-known-servers",
-		"tlsclientcert": "tls-client-cert.pem",
-		"privatekeys": [1]string{"foo.key"},
-		"tlsservercert": "tls-server-cert.pem",
-		"tls": "strict",
-		"tlsknownclients": "tls-known-clients",
-		"tlsclientchain": []interface{}{},
-		"tlsclientkey": "tls-client-key.pem",
-		"socket": "constellation.ipc",
-		"tlsclienttrust": "ca-or-tofu",
-		"tlsserverkey": "tls-server-key.pem",
-		"port": 9001,
+		Verbosity: 1,
+		AlwaysSendTo: []interface{}{},
+		TlsServerChain: []interface{}{},
+		Storage: "dir:storage",
+		WorkDir: "data",
+		Url: "http://127.0.0.1:9001/",
+		TlsServerTrust: "tofu",
+		PublicKeys: [1]string{"foo.pub"},
+		OtherNodes: [1]string{"http://127.0.0.1:9000/"},
+		TlsKnownServers:"tls-known-servers",
+		TlsClientCert: "tls-client-cert.pem",
+		PrivateKeys: [1]string{"foo.key"},
+		TlsServerCert: "tls-server-cert.pem",
+		Tls: "strict",
+		TlsKnownClients: "tls-known-clients",
+		TlsClientChain: []interface{}{},
+		TlsClientKey: "tls-client-key.pem",
+		Socket: "constellation.ipc",
+		TlsClientTrust: "ca-or-tofu",
+		TlsServerKey: "tls-server-key.pem",
+		Port: 9001,
 	}
 
 	verifyConfig(t, conf, expected)

@@ -3,6 +3,9 @@ package api
 import (
 	"encoding/binary"
 	"github.com/kevinburke/nacl"
+	"bytes"
+	"net/http"
+	"io/ioutil"
 )
 
 type EncryptedPayload struct {
@@ -18,14 +21,6 @@ type PartyInfo struct {
 	// public key -> URL
 	Recipients map[string]string
 	Parties map[string]bool  // URLs
-}
-
-type PushRequest struct {
-	// binary encoded payload
-}
-
-type PushResponse struct {
-	// base64 encoded digest
 }
 
 func EncodePayload(ep EncryptedPayload) []byte {
@@ -127,4 +122,24 @@ func writeSliceOfSlice(src [][]byte, dest []byte, offset int) ([]byte, int) {
 	}
 
 	return dest, totalBytes
+}
+
+func Push(epl EncryptedPayload, url string) (string, error) {
+
+	encodedPl := EncodePayload(epl)
+
+	resp, err := http.Post(
+		url + "/push", "application/octet-stream", bytes.NewReader(encodedPl))
+	if err != nil {
+		return "", err
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	if err != nil {
+		return "", err
+	}
+
+	return string(body), nil
 }

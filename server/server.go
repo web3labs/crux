@@ -8,6 +8,7 @@ import (
 	"github.com/blk-io/crux/enclave"
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/api"
+	"encoding/hex"
 )
 
 type TransactionManager struct {
@@ -27,18 +28,36 @@ func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
 		payload, err := base64.StdEncoding.DecodeString(sendReq.Payload)
 		if err != nil {
 			decodeError(w, req, "payload", sendReq.Payload, err)
-		} else {
-			key, err := s.Enclave.Store(&payload)
+			return
+		}
+		decoded, err := base64.StdEncoding.DecodeString(sendReq.From)
+		if err != nil {
+			decodeError(w, req, "sender", sendReq.From, err)
+			return
+		}
+		sender := hex.EncodeToString(decoded)
+
+		recipients := make([]string, len(sendReq.To))
+		for _, value := range sendReq.To {
+			recipient, err := base64.StdEncoding.DecodeString(sendReq.From)
 			if err != nil {
-				badRequest(w,
-					fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
-						key, payload, err))
+				decodeError(w, req, "recipient", value, err)
+				return
 			} else {
-				encodedKey := base64.StdEncoding.EncodeToString(key)
-				sendResp := api.SendResponse{Key : encodedKey}
-				json.NewEncoder(w).Encode(sendResp)
-				w.Header().Set("Content-Type", "application/json")
+				recipients = append(recipients, hex.EncodeToString(recipient))
 			}
+		}
+
+		key, err := s.Enclave.Store(&payload, sender, recipients)
+		if err != nil {
+			badRequest(w,
+				fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
+					key, payload, err))
+		} else {
+			encodedKey := base64.StdEncoding.EncodeToString(key)
+			sendResp := api.SendResponse{Key : encodedKey}
+			json.NewEncoder(w).Encode(sendResp)
+			w.Header().Set("Content-Type", "application/json")
 		}
 	}
 }
@@ -88,7 +107,16 @@ func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
 func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 	payload := make([]byte, 256)
 	req.Body.Read(payload)
+
+	digestHash, err := s.Enclave.StorePayload(payload)
+	if err != nil {
+		badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
+	} else {
+		encodedDigestHash := base64.StdEncoding.EncodeToString(digestHash)
+		fmt.Fprint(w, "%s", encodedDigestHash)
+	}
 }
+
 
 func invalidBody(w http.ResponseWriter, req *http.Request, err error) {
 	req.Body.Close()

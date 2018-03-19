@@ -105,7 +105,8 @@ func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
-	payload := make([]byte, 256)
+	// TODO: Increase size of buffer if not enough capacity
+	payload := make([]byte, 2048)
 	req.Body.Read(payload)
 
 	digestHash, err := s.Enclave.StorePayload(payload)
@@ -117,6 +118,16 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
+
+}
+
+func (s *TransactionManager) PartyInfo(w http.ResponseWriter, req *http.Request) {
+	payload := make([]byte, 2048)
+	req.Body.Read(payload)
+
+
+}
 
 func invalidBody(w http.ResponseWriter, req *http.Request, err error) {
 	req.Body.Close()

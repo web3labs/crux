@@ -31,9 +31,8 @@ func main() {
 
 	// constellation-node --url=https://127.0.0.7:9007/ --port=9007 --workdir=qdata/c7 --socket=tm.ipc --publickeys=tm.pub --privatekeys=tm.key --othernodes=https://127.0.0.1:9001/ >> qdata/logs/constellation7.log 2>&1 &
 
+	// TODO: Populate keys and party info from config
 	enc := enclave.Enclave{Db : db}
-
-
 
 	// TODO: Read key from configuration & add command line tool to generate
 	tm := server.TransactionManager{Key : enclave.NewKey(), Enclave : enc}

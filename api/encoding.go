@@ -72,12 +72,11 @@ func DecodePartyInfo(encoded []byte) PartyInfo {
 		Parties: make(map[string]bool),
 	}
 
-	offset := 0
-	url, offset := readSlice(encoded, offset)
+	url, offset := readSlice(encoded, 0)
 	pi.Url = string(url)
 
-	size := readInt(encoded[offset:])
-	offset += 8
+	var size int
+	size, offset = readInt(encoded, offset)
 
 	for i := 0; i < size; i++ {
 		var kv [][]byte
@@ -85,7 +84,8 @@ func DecodePartyInfo(encoded []byte) PartyInfo {
 		pi.Recipients[string(kv[0])] = string(kv[1])
 	}
 
-	parties, offset := readSliceOfSlice(encoded, offset)
+	var parties [][]byte
+	parties, offset = readSliceOfSlice(encoded, offset)
 	for _, party := range parties {
 		pi.Parties[string(party)] = true
 	}
@@ -114,8 +114,8 @@ func confirmCapacity(dest []byte, offset, required int) []byte {
 	}
 }
 
-func readInt(src []byte) int {
-	return int(binary.BigEndian.Uint64(src))
+func readInt(src []byte, offset int) (int, int) {
+	return int(binary.BigEndian.Uint64(src[offset:])), offset + 8
 }
 
 func writeSlice(src []byte, dest []byte, offset int) ([]byte, int) {
@@ -128,16 +128,15 @@ func writeSlice(src []byte, dest []byte, offset int) ([]byte, int) {
 }
 
 func readSliceToArray(src []byte, offset int, dest []byte) int {
-	length := readInt(src[offset:offset + 8])
-	offset += 8
-	copy(dest, src[offset:offset + length])
-	offset += length
+	var length int
+	length, offset = readInt(src, offset)
+	offset += copy(dest, src[offset:offset + length])
 	return offset
 }
 
 func readSlice(src []byte, offset int) ([]byte, int) {
-	length := readInt(src[offset:offset + 8])
-	offset += 8
+	var length int
+	length, offset = readInt(src, offset)
 	return src[offset:offset + length], offset + length
 }
 
@@ -153,13 +152,12 @@ func writeSliceOfSlice(src [][]byte, dest []byte, offset int) ([]byte, int) {
 }
 
 func readSliceOfSlice(src []byte, offset int) ([][]byte, int) {
-	arraySize := readInt(src[offset:offset + 8])
-	offset += 8
+	arraySize, offset := readInt(src, offset)
 
 	result := make([][]byte, arraySize)
 	for i := 0; i < arraySize; i++ {
-		length := readInt(src[offset:offset + 8])
-		offset += 8
+		var length int
+		length, offset = readInt(src, offset)
 		result[i] = append(
 			result[i], src[offset:offset + length]...)
 		offset += length

@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"net/http"
 	"github.com/blk-io/crux/enclave"
-	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/api"
 	"encoding/hex"
+	"io/ioutil"
 )
 
 type TransactionManager struct {
-	Key nacl.Key
 	Enclave enclave.Enclave
 }
 
@@ -72,7 +71,7 @@ func (s *TransactionManager) Receive(w http.ResponseWriter, req *http.Request) {
 			decodeError(w, req, "key", receiveReq.Key, err)
 		} else {
 			var payload []byte
-			payload, err = s.Enclave.Retrieve(s.Key, &key)
+			payload, err = s.Enclave.Retrieve(&key)
 			if err != nil {
 				badRequest(w,
 					fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
@@ -105,16 +104,17 @@ func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
-	// TODO: Increase size of buffer if not enough capacity
-	payload := make([]byte, 2048)
-	req.Body.Read(payload)
-
-	digestHash, err := s.Enclave.StorePayload(payload)
+	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
-		badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
+		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
-		encodedDigestHash := base64.StdEncoding.EncodeToString(digestHash)
-		fmt.Fprint(w, "%s", encodedDigestHash)
+		digestHash, err := s.Enclave.StorePayload(payload)
+		if err != nil {
+			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
+		} else {
+			encodedDigestHash := base64.StdEncoding.EncodeToString(digestHash)
+			fmt.Fprint(w, "%s", encodedDigestHash)
+		}
 	}
 }
 
@@ -123,10 +123,12 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) PartyInfo(w http.ResponseWriter, req *http.Request) {
-	payload := make([]byte, 2048)
-	req.Body.Read(payload)
-
-
+	payload, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
+	} else {
+		s.Enclave.UpdatePartyInfo(payload)
+	}
 }
 
 func invalidBody(w http.ResponseWriter, req *http.Request, err error) {
@@ -142,5 +144,10 @@ func decodeError(w http.ResponseWriter, req *http.Request, name string, value st
 
 func badRequest(w http.ResponseWriter, message string) {
 	w.WriteHeader(http.StatusBadRequest)
+	fmt.Fprintf(w, message)
+}
+
+func internalServerError(w http.ResponseWriter, message string) {
+	w.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(w, message)
 }

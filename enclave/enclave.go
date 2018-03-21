@@ -13,10 +13,10 @@ import (
 )
 
 type Enclave struct {
-	Db       storage.DataStore
-	pubKeys  []nacl.Key
-	privKeys []nacl.Key
-	partyInfo api.PartyInfo
+	Db        storage.DataStore
+	PubKeys   []nacl.Key
+	PrivKeys  []nacl.Key
+	PartyInfo api.PartyInfo
 }
 
 func (s *Enclave) Store(
@@ -26,8 +26,8 @@ func (s *Enclave) Store(
 
 		if sender == "" {
 			// from address is either default or specified on communication
-			senderPubKey = s.pubKeys[0]
-			senderPrivKey = s.privKeys[0]
+			senderPubKey = s.PubKeys[0]
+			senderPrivKey = s.PrivKeys[0]
 		}
 
 		senderPubKey, err := nacl.Load(sender)
@@ -67,7 +67,7 @@ func (s *Enclave) store(
 	}
 
 	for _, recipient := range recipients {
-		if url, ok := s.partyInfo.Recipients[recipient]; ok {
+		if url, ok := s.PartyInfo.Recipients[recipient]; ok {
 
 			recipientKey, err := nacl.Load(recipient)
 			if err != nil {
@@ -96,21 +96,17 @@ func (s *Enclave) store(
 }
 
 func (s *Enclave) verifySenderKey(publicKey nacl.Key) (nacl.Key, error) {
-	for i, key := range s.pubKeys {
+	for i, key := range s.PubKeys {
 		if bytes.Equal((*publicKey)[:], (*key)[:]) {
-			return s.privKeys[i], nil
+			return s.PrivKeys[i], nil
 		}
 	}
 	return nil, errors.New("unable to find private key for public key")
 }
 
 func (s *Enclave) StorePayload(encodedEpl []byte) ([]byte, error) {
-	decoded, err := api.DecodePayload(encodedEpl)
-	if err != nil {
-		return nil, err
-	} else {
-		return s.storePayload(decoded, encodedEpl)
-	}
+	decoded := api.DecodePayload(encodedEpl)
+	return s.storePayload(decoded, encodedEpl)
 }
 
 func (s *Enclave) storePayload(epl api.EncryptedPayload, encodedEpl []byte) ([]byte, error) {
@@ -138,21 +134,18 @@ func sealPayload(
 		privateKey)
 }
 
-func (s *Enclave) Retrieve(key nacl.Key, digestHash *[]byte) ([]byte, error) {
+func (s *Enclave) Retrieve(digestHash *[]byte) ([]byte, error) {
 
 	encodedEpl, err := s.Db.Read(digestHash)
 	if err != nil {
 		return nil, err
 	}
 
-	epl, err := api.DecodePayload(*encodedEpl)
-	if err != nil {
-		return nil, err
-	}
+	epl := api.DecodePayload(*encodedEpl)
 
 	masterKey := new([nacl.KeySize]byte)
 
-	_, ok := secretbox.Open(masterKey[:], epl.RecipientBoxes[0], epl.RecipientNonce, s.privKeys[0])
+	_, ok := secretbox.Open(masterKey[:], epl.RecipientBoxes[0], epl.RecipientNonce, s.PrivKeys[0])
 	if !ok {
 		return nil, errors.New("unable to open master key secret box")
 	}
@@ -168,4 +161,25 @@ func (s *Enclave) Retrieve(key nacl.Key, digestHash *[]byte) ([]byte, error) {
 
 func (s *Enclave) Delete(digestHash *[]byte) error {
 	return s.Db.Delete(digestHash)
+}
+
+func (s *Enclave) UpdatePartyInfo(encoded []byte) {
+	pi := api.DecodePartyInfo(encoded)
+
+	for publicKey, url := range pi.Recipients {
+		// we should ignore messages about ourselves
+		// in order to stop people masquerading as you, there
+		// should be a digital signature associated with each
+		// url -> node broadcast
+		if url != s.PartyInfo.Url {
+			s.PartyInfo.Recipients[publicKey] = url
+		}
+	}
+
+	for url := range pi.Parties {
+		// we don't want to broadcast party info to ourselves
+		if url != s.PartyInfo.Url {
+			s.PartyInfo.Parties[url] = true
+		}
+	}
 }

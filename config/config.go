@@ -38,8 +38,16 @@ func AllSettings() map[string]interface{} {
 	return viper.AllSettings()
 }
 
+func GetInt(key string) int {
+	return viper.GetInt(key)
+}
+
 func GetString(key string) string {
 	return viper.GetString(key)
+}
+
+func GetStringSlice(key string) []string {
+	return viper.GetStringSlice(key)
 }
 
 

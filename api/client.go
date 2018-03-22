@@ -24,3 +24,9 @@ type ReceiveResponse struct {
 type DeleteRequest struct {
 	Key  string  `json:"key"`
 }
+
+type ResendRequest struct {
+	Type       string  `json:"type"`
+	PublicKey  string  `json:"publicKey"`
+	Key        string  `json:"key,omitempty"`
+}

@@ -3,13 +3,13 @@ package main
 import (
 	"log"
 	"net/http"
-	"github.com/blk-io/crux/config"
-	"github.com/blk-io/crux/enclave"
-	"github.com/blk-io/crux/server"
-	"github.com/blk-io/crux/storage"
 	"os"
-	"github.com/blk-io/crux/api"
 	"strconv"
+	"gitlab.com/eea/crux/config"
+	"gitlab.com/eea/crux/enclave"
+	"gitlab.com/eea/crux/server"
+	"gitlab.com/eea/crux/storage"
+	"gitlab.com/eea/crux/api"
 )
 
 func main() {
@@ -58,11 +58,15 @@ func main() {
 	tm := server.TransactionManager{Enclave : enc}
 
 	http.HandleFunc("/upcheck", tm.Upcheck)
+	http.HandleFunc("/push", tm.Push)
+	http.HandleFunc("/resend", tm.Resend)
+	http.HandleFunc("/partyinfo", tm.PartyInfo)
 
 	// TODO: Restrict to IPC
 	port := config.GetInt(config.Port)
 	http.HandleFunc("/send", tm.Send)
 	http.HandleFunc("/receive", tm.Receive)
+	http.HandleFunc("/delete", tm.Delete)
 	log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), nil))
 
 	// TODO: Add support for propagation methods

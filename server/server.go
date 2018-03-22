@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"github.com/blk-io/crux/enclave"
-	"github.com/blk-io/crux/api"
+	"gitlab.com/eea/crux/enclave"
+	"gitlab.com/eea/crux/api"
 	"encoding/hex"
 	"io/ioutil"
 )
@@ -38,7 +38,7 @@ func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
 
 		recipients := make([]string, len(sendReq.To))
 		for _, value := range sendReq.To {
-			recipient, err := base64.StdEncoding.DecodeString(sendReq.From)
+			recipient, err := base64.StdEncoding.DecodeString(value)
 			if err != nil {
 				decodeError(w, req, "recipient", value, err)
 				return
@@ -119,7 +119,26 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
+	var resendReq api.ResendRequest
+	if err := json.NewDecoder(req.Body).Decode(&resendReq); err != nil {
+		invalidBody(w, req, err)
+	} else {
+		publicKey, err := base64.StdEncoding.DecodeString(resendReq.PublicKey)
+		if err != nil {
+			decodeError(w, req, "publicKey", resendReq.PublicKey, err)
+			return
+		}
 
+		if resendReq.Type == "all" {
+
+		} else if resendReq.Type == "individual" {
+			key, err := base64.StdEncoding.DecodeString(resendReq.PublicKey)
+			if err != nil {
+				decodeError(w, req, "key", resendReq.Key, err)
+				return
+			}
+		}
+	}
 }
 
 func (s *TransactionManager) PartyInfo(w http.ResponseWriter, req *http.Request) {

@@ -3,7 +3,7 @@ package api
 import (
 	"github.com/kevinburke/nacl"
 	"encoding/binary"
-	"github.com/blk-io/crux/utils"
+	"gitlab.com/eea/crux/utils"
 )
 
 func EncodePayload(ep EncryptedPayload) []byte {

@@ -1,7 +1,7 @@
 image: golang:latest
 
 variables:
-  REPO_NAME: gitlab.com/eea/crux
+  REPO_NAME: gitlab.com/blk-io/crux
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -28,7 +28,7 @@ format:
 compile:
     stage: build
     script:
-      - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/mybinary
+      - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/crux
     artifacts:
       paths:
-        - mybinary
+        - crux

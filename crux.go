@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"gitlab.com/eea/crux/config"
-	"gitlab.com/eea/crux/enclave"
-	"gitlab.com/eea/crux/server"
-	"gitlab.com/eea/crux/storage"
-	"gitlab.com/eea/crux/api"
+	"gitlab.com/blk-io/crux/config"
+	"gitlab.com/blk-io/crux/enclave"
+	"gitlab.com/blk-io/crux/server"
+	"gitlab.com/blk-io/crux/storage"
+	"gitlab.com/blk-io/crux/api"
 )
 
 func main() {

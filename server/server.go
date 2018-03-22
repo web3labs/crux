@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"gitlab.com/eea/crux/enclave"
-	"gitlab.com/eea/crux/api"
+	"gitlab.com/blk-io/crux/enclave"
+	"gitlab.com/blk-io/crux/api"
 	"encoding/hex"
 	"io/ioutil"
 )

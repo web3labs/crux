@@ -61,7 +61,7 @@ func (s *Enclave) store(
 	encryptedPayload := api.EncryptedPayload {
 		Sender:         senderPubKey,
 		CipherText:     sealedMessage,
-		Nonce:          nonce[:],
+		Nonce:          nonce,
 		RecipientBoxes: make([][]byte, len(recipients)),
 		RecipientNonce: recipientNonce,
 	}

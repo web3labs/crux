@@ -23,12 +23,10 @@ type PartyInfo struct {
 }
 
 
-func Push(epl EncryptedPayload, url string) (string, error) {
-
-	encodedPl := EncodePayload(epl)
+func Push(encoded []byte, url string) (string, error) {
 
 	resp, err := http.Post(
-		url + "/push", "application/octet-stream", bytes.NewReader(encodedPl))
+		url + "/push", "application/octet-stream", bytes.NewReader(encoded))
 	if err != nil {
 		return "", err
 	}

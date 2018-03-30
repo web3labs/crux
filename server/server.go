@@ -69,19 +69,25 @@ func (s *TransactionManager) Receive(w http.ResponseWriter, req *http.Request) {
 		key, err := base64.StdEncoding.DecodeString(receiveReq.Key)
 		if err != nil {
 			decodeError(w, req, "key", receiveReq.Key, err)
+			return
+		}
+		to, err := base64.StdEncoding.DecodeString(receiveReq.To)
+		if err != nil {
+			decodeError(w, req, "to", receiveReq.Key, err)
+			return
+		}
+
+		var payload []byte
+		payload, err = s.Enclave.Retrieve(&key, &to)
+		if err != nil {
+			badRequest(w,
+				fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
+					receiveReq.Key, err))
 		} else {
-			var payload []byte
-			payload, err = s.Enclave.Retrieve(&key)
-			if err != nil {
-				badRequest(w,
-					fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
-						receiveReq.Key, err))
-			} else {
-				encodedPayload := base64.StdEncoding.EncodeToString(payload)
-				sendResp := api.ReceiveResponse{Payload: encodedPayload}
-				json.NewEncoder(w).Encode(sendResp)
-				w.Header().Set("Content-Type", "application/json")
-			}
+			encodedPayload := base64.StdEncoding.EncodeToString(payload)
+			sendResp := api.ReceiveResponse{Payload: encodedPayload}
+			json.NewEncoder(w).Encode(sendResp)
+			w.Header().Set("Content-Type", "application/json")
 		}
 	}
 }
@@ -108,6 +114,7 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
+		// TODO: Store empty list of public keys along with payload
 		digestHash, err := s.Enclave.StorePayload(payload)
 		if err != nil {
 			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
@@ -132,10 +139,12 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 		if resendReq.Type == "all" {
 
 		} else if resendReq.Type == "individual" {
-			key, err := base64.StdEncoding.DecodeString(resendReq.PublicKey)
+			key, err := base64.StdEncoding.DecodeString(resendReq.Key)
 			if err != nil {
 				decodeError(w, req, "key", resendReq.Key, err)
 				return
+			} else {
+
 			}
 		}
 	}

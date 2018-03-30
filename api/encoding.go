@@ -17,7 +17,7 @@ func EncodePayload(ep EncryptedPayload) []byte {
 	encoded, offset = writeSliceOfSlice(ep.RecipientBoxes, encoded, offset)
 	encoded, offset = writeSlice((*ep.RecipientNonce)[:], encoded, offset)
 
-	return encoded
+	return encoded[:offset]
 }
 
 func DecodePayload(encoded []byte) EncryptedPayload {
@@ -36,6 +36,29 @@ func DecodePayload(encoded []byte) EncryptedPayload {
 	offset = readSliceToArray(encoded, offset, (*ep.RecipientNonce)[:])
 
 	return ep
+}
+
+func EncodePayloadWithRecipients(ep EncryptedPayload, recipients [][]byte) []byte {
+	encoded := make([][]byte, 2)
+
+	encoded[0] = EncodePayload(ep)
+
+	encodedRecipients := make([]byte, 256)
+	encodedRecipients, recipientsLength := writeSliceOfSlice(recipients, encodedRecipients, 0)
+	encoded[1] = encodedRecipients[:recipientsLength]
+
+	encoded2, length := writeSliceOfSlice(encoded, make([]byte, 512), 0)
+	return encoded2[:length]
+}
+
+func DecodePayloadWithRecipients(encoded []byte) (EncryptedPayload, [][]byte) {
+
+	decoded, _ := readSliceOfSlice(encoded, 0)
+
+	ep := DecodePayload(decoded[0])
+	recipients, _ := readSliceOfSlice(decoded[1], 0)
+
+	return ep, recipients
 }
 
 func EncodePartyInfo(pi PartyInfo) []byte {

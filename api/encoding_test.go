@@ -24,6 +24,49 @@ func TestEncodePayload(t *testing.T) {
 	}
 }
 
+func TestEncodePayloadWithRecipients(t *testing.T) {
+
+	epls := []EncryptedPayload{
+		{
+			Sender: nacl.NewKey(),
+			CipherText: []byte("C1ph3r T3xt1"),
+			Nonce: nacl.NewNonce(),
+			RecipientBoxes: [][]byte{ []byte("B0x1"), []byte("B0x2"), []byte("B0x3") },
+			RecipientNonce: nacl.NewNonce(),
+		},
+		{
+			Sender: nacl.NewKey(),
+			CipherText: []byte("C1ph3r T3xt2"),
+			Nonce: nacl.NewNonce(),
+			RecipientBoxes: [][]byte{ []byte("B0x1") },
+			RecipientNonce: nacl.NewNonce(),
+		},
+	}
+
+	recipients := [][][]byte{
+		{
+			(*nacl.NewKey())[:],
+			(*nacl.NewKey())[:],
+			(*nacl.NewKey())[:],
+		},
+		{}, // Recipients may be empty
+	}
+
+	for i, epl := range epls {
+		encoded := EncodePayloadWithRecipients(epl, recipients[i])
+		decodedEpl, decodedRecipients := DecodePayloadWithRecipients(encoded)
+
+		if !reflect.DeepEqual(epl, decodedEpl) {
+			t.Errorf("Decoded partyInfo: %v does not match input %v", decodedEpl, epl)
+		}
+
+		if !reflect.DeepEqual(recipients[i], decodedRecipients) {
+			t.Errorf("Decoded partyInfo: %v does not match input %v",
+				decodedRecipients, recipients[i])
+		}
+	}
+}
+
 
 func TestEncodePartyInfo(t *testing.T) {
 

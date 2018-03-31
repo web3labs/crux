@@ -1,6 +1,8 @@
 package storage
 
-import "github.com/syndtr/goleveldb/leveldb"
+import (
+	"github.com/syndtr/goleveldb/leveldb"
+)
 
 type levelDb struct {
 	dbPath string
@@ -26,6 +28,16 @@ func (db *levelDb) Read(key *[]byte) (*[]byte, error) {
 	} else {
 		return nil, err
 	}
+}
+
+func (db *levelDb) ReadAll(f func(key, value *[]byte)) error {
+	iter := db.conn.NewIterator(nil, nil)
+	for iter.Next() {
+		key, value := iter.Key(), iter.Value()
+		f(&key, &value)
+	}
+	iter.Release()
+	return iter.Error()
 }
 
 func (db *levelDb) Delete(key *[]byte) error {

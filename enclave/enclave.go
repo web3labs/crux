@@ -158,7 +158,6 @@ func (s *Enclave) store(
 func (s *Enclave) publishPayload(epl api.EncryptedPayload, recipient string) {
 
 	if url, ok := s.PartyInfo.Recipients[recipient]; ok {
-
 		encoded := api.EncodePayloadWithRecipients(epl, [][]byte{})
 		api.Push(encoded, url)
 	} else {
@@ -265,6 +264,49 @@ func (s *Enclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+func (s *Enclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
+	encoded, err := s.Db.Read(digestHash)
+	if err != nil {
+		return nil, err
+	}
+
+	epl, recipients := api.DecodePayloadWithRecipients(*encoded)
+
+	for i, recipient := range recipients {
+		if bytes.Equal(*reqRecipient, recipient) {
+			recipientEpl := api.EncryptedPayload{
+				Sender:         epl.Sender,
+				CipherText:     epl.CipherText,
+				Nonce:          epl.Nonce,
+				RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
+				RecipientNonce: epl.RecipientNonce,
+			}
+			encoded := api.EncodePayload(recipientEpl)
+			return &encoded, nil
+		}
+	}
+	return nil, fmt.Errorf("invalid recipient %q requested for payload", reqRecipient)
+}
+
+func (s *Enclave) RetrieveAllFor(reqRecipient *[]byte) error {
+	return s.Db.ReadAll(func(key, value *[]byte) {
+		epl, recipients := api.DecodePayloadWithRecipients(*value)
+
+		for i, recipient := range recipients {
+			if bytes.Equal(*reqRecipient, recipient) {
+				recipientEpl := api.EncryptedPayload{
+					Sender:         epl.Sender,
+					CipherText:     epl.CipherText,
+					Nonce:          epl.Nonce,
+					RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
+					RecipientNonce: epl.RecipientNonce,
+				}
+				go s.publishPayload(recipientEpl, string(*reqRecipient))
+			}
+		}
+	})
 }
 
 func (s *Enclave) Delete(digestHash *[]byte) error {

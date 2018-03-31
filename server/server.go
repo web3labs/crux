@@ -114,7 +114,6 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
-		// TODO: Store empty list of public keys along with payload
 		digestHash, err := s.Enclave.StorePayload(payload)
 		if err != nil {
 			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
@@ -130,7 +129,8 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 	if err := json.NewDecoder(req.Body).Decode(&resendReq); err != nil {
 		invalidBody(w, req, err)
 	} else {
-		publicKey, err := base64.StdEncoding.DecodeString(resendReq.PublicKey)
+		var publicKey []byte
+		publicKey, err = base64.StdEncoding.DecodeString(resendReq.PublicKey)
 		if err != nil {
 			decodeError(w, req, "publicKey", resendReq.PublicKey, err)
 			return
@@ -138,14 +138,23 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 
 		if resendReq.Type == "all" {
 
+
+
 		} else if resendReq.Type == "individual" {
-			key, err := base64.StdEncoding.DecodeString(resendReq.Key)
+			var key []byte
+			key, err = base64.StdEncoding.DecodeString(resendReq.Key)
 			if err != nil {
 				decodeError(w, req, "key", resendReq.Key, err)
 				return
-			} else {
-
 			}
+
+			var encodedPl *[]byte
+			encodedPl, err = s.Enclave.RetrieveFor(&key, &publicKey)
+			if err != nil {
+				decodeError(w, req, "publicKey", resendReq.PublicKey, err)
+				return
+			}
+			fmt.Fprint(w, "%s", encodedPl)
 		}
 	}
 }

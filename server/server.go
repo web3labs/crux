@@ -119,7 +119,7 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
 		} else {
 			encodedDigestHash := base64.StdEncoding.EncodeToString(digestHash)
-			fmt.Fprint(w, "%s", encodedDigestHash)
+			fmt.Fprintf(w, "%s", encodedDigestHash)
 		}
 	}
 }
@@ -137,9 +137,10 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if resendReq.Type == "all" {
-
-
-
+			err = s.Enclave.RetrieveAllFor(&publicKey)
+			if err != nil {
+				invalidBody(w, req, err)
+			}
 		} else if resendReq.Type == "individual" {
 			var key []byte
 			key, err = base64.StdEncoding.DecodeString(resendReq.Key)
@@ -151,10 +152,10 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 			var encodedPl *[]byte
 			encodedPl, err = s.Enclave.RetrieveFor(&key, &publicKey)
 			if err != nil {
-				decodeError(w, req, "publicKey", resendReq.PublicKey, err)
+				invalidBody(w, req, err)
 				return
 			}
-			fmt.Fprint(w, "%s", encodedPl)
+			w.Write(*encodedPl)
 		}
 	}
 }

@@ -190,6 +190,7 @@ func doKeyGeneration(keyFile string) {
 	if err != nil {
 		log.Fatalf("Unable to write private key: %s, error: %q", keyFile, err)
 	}
+	log.Printf("Key pair successfully written to %s", keyFile)
 }
 
 func loadPartyInfo(otherNodes []string) api.PartyInfo {

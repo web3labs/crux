@@ -35,5 +35,5 @@ type PrivateKeyBytes struct {
 
 type PrivateKey struct {
 	Data  PrivateKeyBytes  `json:"data"`
-	Type  string           `json:"unlocked"`
+	Type  string           `json:"type"`
 }

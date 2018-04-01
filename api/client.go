@@ -1,7 +1,5 @@
 package api
 
-// TODO: Support protobuf API
-
 type SendRequest struct {
 	Payload  string  `json:"payload"`
 	From     string  `json:"from"`
@@ -29,4 +27,13 @@ type ResendRequest struct {
 	Type       string  `json:"type"`
 	PublicKey  string  `json:"publicKey"`
 	Key        string  `json:"key,omitempty"`
+}
+
+type PrivateKeyBytes struct {
+	Bytes  string  `json:"bytes"`
+}
+
+type PrivateKey struct {
+	Data  PrivateKeyBytes  `json:"data"`
+	Type  string           `json:"unlocked"`
 }

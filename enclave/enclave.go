@@ -230,14 +230,14 @@ func (s *Enclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	if len(recipients) == 0 {
 		// This is a payload originally sent to us by another node
 		recipientPubKey = epl.Sender
-		senderPubKey, err = toKey(*to)
+		senderPubKey, err = ToKey(*to)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		// This is a payload that originated from us
 		senderPubKey = epl.Sender
-		recipientPubKey, err = toKey(recipients[0])
+		recipientPubKey, err = ToKey(recipients[0])
 		if err != nil {
 			return nil, err
 		}
@@ -334,7 +334,7 @@ func (s *Enclave) UpdatePartyInfo(encoded []byte) {
 	}
 }
 
-func toKey(src []byte) (nacl.Key, error) {
+func ToKey(src []byte) (nacl.Key, error) {
 	if len(src) != nacl.KeySize {
 		return nil, fmt.Errorf("nacl: incorrect key length: %d", len(src))
 	}

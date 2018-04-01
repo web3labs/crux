@@ -1,32 +1,61 @@
 package config
 
 import (
+	"flag"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
 const (
 	Verbosity = "verbosity"
 	AlwaysSendTo = "alwayssendto"
-	TlsServerChain = "tlsserverchain"
 	Storage = "storage"
 	WorkDir = "workdir"
 	Url = "url"
-	TlsServerTrust = "tlsservertrust"
-	PublicKeys = "publickeys"
 	OtherNodes = "othernodes"
+	PublicKeys = "publickeys"
+	PrivateKeys = "privatekeys"
+	Port = "port"
+	Socket = "socket"
+
+	GenerateKeys = "generate-keys"
+
+	Tls = "tls"
+	TlsServerChain = "tlsserverchain"
+	TlsServerTrust = "tlsservertrust"
 	TlsKnownServers = "tlsknownservers"
 	TlsClientCert = "tlsclientcert"
-	PrivateKeys = "privatekeys"
 	TlsServerCert = "tlsservercert"
-	Tls = "tls"
 	TlsKnownClients = "tlsknownclients"
 	TlsClientChain = "tlsclientchain"
 	TlsClientKey = "tlsclientkey"
-	Socket = "socket"
 	TlsClientTrust = "tlsclienttrust"
 	TlsServerKey = "tlsserverkey"
-	Port = "port"
 )
+
+func InitFlags() {
+	flag.String(GenerateKeys, "", "Generate a new keypair")
+	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
+	flag.Int(Port, 0, "The local port to listen on")
+	flag.String(WorkDir, ".", "The folder to put stuff in (default: .)")
+	flag.String(Socket, "", "IPC socket to create for access to the Private API")
+	flag.String(OtherNodes, "", "\"Boot nodes\" to connect to to discover the network")
+	flag.String(PublicKeys, "", "Public keys hosted by this node")
+	flag.String(PrivateKeys, "", "Private keys hosted by this node")
+
+	flag.Int(Verbosity, 1, "Verbosity level of logs")
+	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
+
+	// storage not currently supported as we use LevelDB
+	// TLS is not currently supported
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+}
+
+func ParseCommandLine() {
+	pflag.Parse()
+	viper.BindPFlags(pflag.CommandLine)
+}
 
 func LoadConfig(configPath string) error {
 	viper.SetConfigType("hcl")

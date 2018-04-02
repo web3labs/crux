@@ -62,33 +62,31 @@ func Init(
 
 		// We have a once off generated key which we use for storing payloads which are addressed
 		// only to ourselves. We have to do this, as we cannot use box.Seal with a public and
-		// private keypair
+		// private key-pair.
 		//
-		// We precompute these keys on startup
+		// We pre-compute these keys on startup.
 		enc.resolveSharedKey(enc.PrivKeys[0], pubKey, enc.selfPubKey)
 	}
 
-	/*
-	We use shared keys for encrypting data. The keys between a specific sender and recipient are
-	computed once for each unique
-
-	Encrypt scenarios:
-	The sender value must always be a public key that we have the corresponding private key for
-	privateFor: [] => 	encrypt with sharedKey [self-private, selfPub-public]
-						store in cache as (self-public, selfPub-public)
-	privateFor: [recipient1, ...] => encrypt with sharedKey1 [self-private, recipient1-public], ...
-						store in cache as (self-public, recipient1-public)
-	Decrypt scenarios:
-	epl, [] => The payload was pushed to us (we are recipient1), decrypt with sharedKey [recipient1-private, sender-public]
-						lookup in cache as (recipient1-public, sender-public)
-	epl, [recipient1, ...,] => The payload originated with us (we are self), decrypt with sharedKey [self-private, recipient1-public]
-						lookup in cache as (self-public, recipient1-public)
-
-	Note that sharedKey(privA, pubB) produces the same key as sharedKey(pubA, privB), which is why
-	when sending to ones self we encrypt with sharedKey [self-private, selfPub-public], then
-	retrieve with sharedKey [self-private, selfPub-public]
-	 */
-	 return enc
+	// We use shared keys for encrypting data. The keys between a specific sender and recipient are
+	// computed once for each unique pair.
+	//
+	// Encrypt scenarios:
+	// The sender value must always be a public key that we have the corresponding private key for
+	// privateFor: [] => 	encrypt with sharedKey [self-private, selfPub-public]
+	// 					store in cache as (self-public, selfPub-public)
+	// privateFor: [recipient1, ...] => encrypt with sharedKey1 [self-private, recipient1-public], ...
+	// 					store in cache as (self-public, recipient1-public)
+	// Decrypt scenarios:
+	// epl, [] => The payload was pushed to us (we are recipient1), decrypt with sharedKey [recipient1-private, sender-public]
+	// 					lookup in cache as (recipient1-public, sender-public)
+	// epl, [recipient1, ...,] => The payload originated with us (we are self), decrypt with sharedKey [self-private, recipient1-public]
+	// 					lookup in cache as (self-public, recipient1-public)
+	//
+	// Note that sharedKey(privA, pubB) produces the same key as sharedKey(pubA, privB), which is why
+	// when sending to ones self we encrypt with sharedKey [self-private, selfPub-public], then
+	// retrieve with sharedKey [self-private, selfPub-public]
+	return enc
 }
 
 func (s *Enclave) Store(
@@ -187,7 +185,7 @@ func (s *Enclave) store(
 
 func (s *Enclave) publishPayload(epl api.EncryptedPayload, recipient string) {
 
-	if url, ok := s.PartyInfo.Recipients[recipient]; ok {
+	if url, ok := s.PartyInfo.GetRecipient(recipient); ok {
 		encoded := api.EncodePayloadWithRecipients(epl, [][]byte{})
 		api.Push(encoded, url)
 	} else {

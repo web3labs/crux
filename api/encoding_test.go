@@ -71,8 +71,8 @@ func TestEncodePayloadWithRecipients(t *testing.T) {
 func TestEncodePartyInfo(t *testing.T) {
 
 	pi := PartyInfo{
-		Url: "https://127.0.0.4:9004/",
-		Recipients: map[string]string{
+		url: "https://127.0.0.4:9004/",
+		recipients: map[string]string{
 			"ROAZBWtSacxXQrOe3FGAqJDyJjFePR5ce4TSIzmJ0Bc=": "https://127.0.0.7:9007/",
 			"BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=": "https://127.0.0.1:9001/",
 			"QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc=": "https://127.0.0.2:9002/",
@@ -81,7 +81,7 @@ func TestEncodePartyInfo(t *testing.T) {
 			"oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8=": "https://127.0.0.4:9004/",
 			"R56gy4dn24YOjwyesTczYa8m5xhP6hF2uTMCju/1xkY=": "https://127.0.0.5:9005/",
 		},
-		Parties: map[string]bool{
+		parties: map[string]bool{
 			"https://127.0.0.5:9005/": true,
 			"https://127.0.0.3:9003/": true,
 			"https://127.0.0.1:9001/": true,

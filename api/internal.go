@@ -3,10 +3,10 @@ package api
 import (
 	"bytes"
 	"io/ioutil"
-	log "github.com/sirupsen/logrus"
 	"math/rand"
 	"net/http"
 	"time"
+	log "github.com/sirupsen/logrus"
 	"github.com/kevinburke/nacl"
 )
 
@@ -19,10 +19,15 @@ type EncryptedPayload struct {
 }
 
 type PartyInfo struct {
-	Url string
+	url string
 	// public key -> URL
-	Recipients map[string]string
-	Parties map[string]bool  // URLs
+	recipients map[string]string
+	parties    map[string]bool // URLs
+}
+
+func (s *PartyInfo) GetRecipient(key string) (string, bool) {
+	value, ok := s.recipients[key]
+	return value, ok
 }
 
 func LoadPartyInfo(url string, otherNodes []string) PartyInfo {
@@ -32,9 +37,9 @@ func LoadPartyInfo(url string, otherNodes []string) PartyInfo {
 	}
 
 	return PartyInfo{
-		Url: url,
-		Recipients: make(map[string]string),
-		Parties: parties,
+		url:        url,
+		recipients: make(map[string]string),
+		parties:    parties,
 	}
 }
 
@@ -43,7 +48,7 @@ func (s *PartyInfo) GetPartyInfo() {
 
 	// First copy our endpoints as we update this map in place
 	urls := make(map[string]bool)
-	for k, v := range s.Parties {
+	for k, v := range s.parties {
 		urls[k] = v
 	}
 
@@ -86,23 +91,26 @@ func (s *PartyInfo) PollPartyInfo() {
 	}()
 }
 
+// This can happen from the /partyinfo server endpoint being hit, or
+// by a response from us hitting another nodes /partyinfo endpoint
+// TODO: Control access via a channel for updates
 func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 	pi := DecodePartyInfo(encoded)
 
-	for publicKey, url := range pi.Recipients {
+	for publicKey, url := range pi.recipients {
 		// we should ignore messages about ourselves
 		// in order to stop people masquerading as you, there
 		// should be a digital signature associated with each
 		// url -> node broadcast
-		if url != s.Url {
-			s.Recipients[publicKey] = url
+		if url != s.url {
+			s.recipients[publicKey] = url
 		}
 	}
 
-	for url := range pi.Parties {
+	for url := range pi.parties {
 		// we don't want to broadcast party info to ourselves
-		if url != s.Url {
-			s.Parties[url] = true
+		if url != s.url {
+			s.parties[url] = true
 		}
 	}
 }

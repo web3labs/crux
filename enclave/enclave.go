@@ -1,23 +1,23 @@
 package enclave
 
 import (
+	"bytes"
+	"crypto/rand"
+	"encoding/json"
+	"encoding/base64"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	log "github.com/sirupsen/logrus"
+	"path/filepath"
+	"strings"
 	"github.com/kevinburke/nacl"
 	"github.com/kevinburke/nacl/box"
 	"github.com/kevinburke/nacl/secretbox"
 	"gitlab.com/blk-io/crux/storage"
-	"golang.org/x/crypto/sha3"
 	"gitlab.com/blk-io/crux/api"
-	log "github.com/sirupsen/logrus"
-	"errors"
-	"bytes"
-	"fmt"
-	"io/ioutil"
-	"encoding/json"
-	"strings"
-	"encoding/base64"
-	"path/filepath"
 	"gitlab.com/blk-io/crux/utils"
-	"crypto/rand"
+	"golang.org/x/crypto/sha3"
 )
 
 type Enclave struct {
@@ -341,31 +341,6 @@ func (s *Enclave) RetrieveAllFor(reqRecipient *[]byte) error {
 
 func (s *Enclave) Delete(digestHash *[]byte) error {
 	return s.Db.Delete(digestHash)
-}
-
-func (s *Enclave) UpdatePartyInfo(encoded []byte) {
-	pi := api.DecodePartyInfo(encoded)
-
-	for publicKey, url := range pi.Recipients {
-		// we should ignore messages about ourselves
-		// in order to stop people masquerading as you, there
-		// should be a digital signature associated with each
-		// url -> node broadcast
-		if url != s.PartyInfo.Url {
-			s.PartyInfo.Recipients[publicKey] = url
-		}
-	}
-
-	for url := range pi.Parties {
-		// we don't want to broadcast party info to ourselves
-		if url != s.PartyInfo.Url {
-			s.PartyInfo.Parties[url] = true
-		}
-	}
-}
-
-func (s *Enclave) GetEncodedPartyInfo() []byte {
-	return api.EncodePartyInfo(s.PartyInfo)
 }
 
 func toKey(src []byte) (nacl.Key, error) {

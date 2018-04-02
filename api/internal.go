@@ -2,13 +2,12 @@ package api
 
 import (
 	"bytes"
-	"net/http"
 	"io/ioutil"
-	"github.com/kevinburke/nacl"
 	log "github.com/sirupsen/logrus"
-	"gitlab.com/blk-io/crux/server"
-	"time"
 	"math/rand"
+	"net/http"
+	"time"
+	"github.com/kevinburke/nacl"
 )
 
 type EncryptedPayload struct {
@@ -39,8 +38,8 @@ func LoadPartyInfo(url string, otherNodes []string) PartyInfo {
 	}
 }
 
-func (s *PartyInfo) GetPartyInfo(tm server.TransactionManager) {
-	partyInfo := tm.Enclave.GetEncodedPartyInfo()
+func (s *PartyInfo) GetPartyInfo() {
+	encodedPartyInfo := EncodePartyInfo(*s)
 
 	// First copy our endpoints as we update this map in place
 	urls := make(map[string]bool)
@@ -50,7 +49,7 @@ func (s *PartyInfo) GetPartyInfo(tm server.TransactionManager) {
 
 	for url := range urls {
 		resp, err := http.Post(
-			url + "/partyinfo", "application/octet-stream", bytes.NewReader(partyInfo))
+			url + "/partyinfo", "application/octet-stream", bytes.NewReader(encodedPartyInfo))
 		if err != nil {
 			log.WithField("url", url).Errorf(
 				"Error sending /partyinfo request, %v", err)
@@ -64,13 +63,13 @@ func (s *PartyInfo) GetPartyInfo(tm server.TransactionManager) {
 				"Unable to read partInfo response from host, %v", err)
 			break
 		}
-		tm.Enclave.UpdatePartyInfo(encoded)
+		s.UpdatePartyInfo(encoded)
 	}
 }
 
-func (s *PartyInfo) PollPartyInfo(tm server.TransactionManager) {
+func (s *PartyInfo) PollPartyInfo() {
 	time.Sleep(time.Duration(rand.Intn(16)) * time.Second)
-	s.GetPartyInfo(tm)
+	s.GetPartyInfo()
 
 	ticker := time.NewTicker(2 * time.Minute)
 	quit := make(chan struct{})
@@ -78,13 +77,34 @@ func (s *PartyInfo) PollPartyInfo(tm server.TransactionManager) {
 		for {
 			select {
 			case <- ticker.C:
-				s.GetPartyInfo(tm)
+				s.GetPartyInfo()
 			case <- quit:
 				ticker.Stop()
 				return
 			}
 		}
 	}()
+}
+
+func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
+	pi := DecodePartyInfo(encoded)
+
+	for publicKey, url := range pi.Recipients {
+		// we should ignore messages about ourselves
+		// in order to stop people masquerading as you, there
+		// should be a digital signature associated with each
+		// url -> node broadcast
+		if url != s.Url {
+			s.Recipients[publicKey] = url
+		}
+	}
+
+	for url := range pi.Parties {
+		// we don't want to broadcast party info to ourselves
+		if url != s.Url {
+			s.Parties[url] = true
+		}
+	}
 }
 
 func Push(encoded []byte, url string) (string, error) {

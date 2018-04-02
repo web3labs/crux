@@ -190,8 +190,8 @@ func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request)
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
-		s.Enclave.UpdatePartyInfo(payload)
-		w.Write(s.Enclave.GetEncodedPartyInfo())
+		s.Enclave.PartyInfo.UpdatePartyInfo(payload)
+		w.Write(api.EncodePartyInfo(s.Enclave.PartyInfo))
 	}
 }
 

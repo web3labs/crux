@@ -77,13 +77,12 @@ func main() {
 		log.Fatalln("Port must be specified")
 	}
 
-	var tm server.TransactionManager
-	tm, err = server.Init(enc, port)
+	_, err = server.Init(enc, port)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}
 
-	pi.PollPartyInfo(tm)
+	pi.PollPartyInfo()
 }
 
 func exit() {

@@ -4,6 +4,8 @@ import (
 	"flag"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	"os"
+	"fmt"
 )
 
 const (
@@ -36,12 +38,13 @@ const (
 func InitFlags() {
 	flag.String(GenerateKeys, "", "Generate a new keypair")
 	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
-	flag.Int(Port, 0, "The local port to listen on")
+	flag.Int(Port, -1, "The local port to listen on")
 	flag.String(WorkDir, ".", "The folder to put stuff in (default: .)")
 	flag.String(Socket, "", "IPC socket to create for access to the Private API")
 	flag.String(OtherNodes, "", "\"Boot nodes\" to connect to to discover the network")
 	flag.String(PublicKeys, "", "Public keys hosted by this node")
 	flag.String(PrivateKeys, "", "Private keys hosted by this node")
+	flag.String(Storage, "crux.db", "Database storage file name")
 
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
@@ -50,6 +53,12 @@ func InitFlags() {
 	// TLS is not currently supported
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+}
+
+func Usage() {
+	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "      %-25s%s\n", "crux.config", "Optional config file")
+	pflag.PrintDefaults()
 }
 
 func ParseCommandLine() {

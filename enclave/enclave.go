@@ -11,6 +11,13 @@ import (
 	"errors"
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"encoding/json"
+	"strings"
+	"encoding/base64"
+	"path/filepath"
+	"gitlab.com/blk-io/crux/utils"
+	"crypto/rand"
 )
 
 type Enclave struct {
@@ -22,21 +29,43 @@ type Enclave struct {
 	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // maps sender -> recipient -> shared key
 }
 
-func (s *Enclave) Init() {
+func Init(
+	db storage.DataStore,
+	pubKeyFiles, privKeyFiles []string,
+	pi api.PartyInfo) Enclave {
 
-	s.keyCache = make(map[nacl.Key]map[nacl.Key]nacl.Key)
+	// BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=
+	pubKeys, err := loadPubKeys(pubKeyFiles)
+	if err != nil {
+		log.Fatalf("Unable to load public key files: %s, error: %v", pubKeyFiles, err)
+	}
 
-	s.selfPubKey = nacl.NewKey()
+	// {"data":{"bytes":"Wl+xSyXVuuqzpvznOS7dOobhcn4C5auxkFRi7yLtgtA="},"type":"unlocked"}
+	privKeys, err := loadPrivKeys(privKeyFiles)
+	if err != nil {
+		log.Fatalf("Unable to load private key files: %s, error: %v", pubKeyFiles, err)
+	}
 
-	for _, pubKey := range s.PubKeys {
-		s.keyCache[pubKey] = make(map[nacl.Key]nacl.Key)
+	enc := Enclave{
+		Db : db,
+		PubKeys: pubKeys,
+		PrivKeys: privKeys,
+		PartyInfo: pi,
+	}
+
+	enc.keyCache = make(map[nacl.Key]map[nacl.Key]nacl.Key)
+
+	enc.selfPubKey = nacl.NewKey()
+
+	for _, pubKey := range enc.PubKeys {
+		enc.keyCache[pubKey] = make(map[nacl.Key]nacl.Key)
 
 		// We have a once off generated key which we use for storing payloads which are addressed
 		// only to ourselves. We have to do this, as we cannot use box.Seal with a public and
 		// private keypair
 		//
 		// We precompute these keys on startup
-		s.resolveSharedKey(s.PrivKeys[0], pubKey, s.selfPubKey)
+		enc.resolveSharedKey(enc.PrivKeys[0], pubKey, enc.selfPubKey)
 	}
 
 	/*
@@ -59,6 +88,7 @@ func (s *Enclave) Init() {
 	when sending to ones self we encrypt with sharedKey [self-private, selfPub-public], then
 	retrieve with sharedKey [self-private, selfPub-public]
 	 */
+	 return enc
 }
 
 func (s *Enclave) Store(
@@ -230,14 +260,14 @@ func (s *Enclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	if len(recipients) == 0 {
 		// This is a payload originally sent to us by another node
 		recipientPubKey = epl.Sender
-		senderPubKey, err = ToKey(*to)
+		senderPubKey, err = toKey(*to)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		// This is a payload that originated from us
 		senderPubKey = epl.Sender
-		recipientPubKey, err = ToKey(recipients[0])
+		recipientPubKey, err = toKey(recipients[0])
 		if err != nil {
 			return nil, err
 		}
@@ -334,11 +364,114 @@ func (s *Enclave) UpdatePartyInfo(encoded []byte) {
 	}
 }
 
-func ToKey(src []byte) (nacl.Key, error) {
+func (s *Enclave) GetEncodedPartyInfo() []byte {
+	return api.EncodePartyInfo(s.PartyInfo)
+}
+
+func toKey(src []byte) (nacl.Key, error) {
 	if len(src) != nacl.KeySize {
 		return nil, fmt.Errorf("nacl: incorrect key length: %d", len(src))
 	}
 	key := new([nacl.KeySize]byte)
 	copy(key[:], src)
 	return key, nil
+}
+
+func loadPubKeys(pubKeyFiles []string) ([]nacl.Key, error) {
+	return loadKeys(
+		pubKeyFiles,
+		func(s string) (string, error) {
+			src, err := ioutil.ReadFile(s)
+			if err != nil {
+				return "", err
+			}
+			return string(src), nil
+		})
+}
+
+func loadPrivKeys(privKeyFiles []string) ([]nacl.Key, error) {
+	return loadKeys(
+		privKeyFiles,
+		func(s string) (string, error) {
+			var privateKey api.PrivateKey
+			src, err := ioutil.ReadFile(s)
+			if err != nil {
+				return "", err
+			}
+			err = json.Unmarshal(src, privateKey)
+			if err != nil {
+				return "", err
+			}
+
+			return privateKey.Data.Bytes, nil
+		})
+}
+
+func loadKeys(
+	keyFiles []string, f func(string) (string, error)) ([]nacl.Key, error) {
+	keys := make([]nacl.Key, len(keyFiles))
+
+	for i, keyFile := range keyFiles {
+		data, err := f(keyFile)
+		if err != nil {
+			return nil, err
+		}
+		var key nacl.Key
+		key, err = loadBase64Key(
+			strings.TrimSuffix(data, "\n"))
+		if err != nil {
+			return nil, err
+		}
+		keys[i] = key
+	}
+
+	return keys, nil
+}
+
+func loadBase64Key(key string) (nacl.Key, error) {
+	src, err := base64.StdEncoding.DecodeString(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return toKey(src)
+}
+
+func DoKeyGeneration(keyFile string) error {
+	pubKey, privKey, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		return fmt.Errorf("error creating keys: %v", err)
+	}
+	err = utils.CreateDirForFile(keyFile)
+	if err != nil {
+		return fmt.Errorf("invalid destination specified: %s, error: %v",
+			filepath.Dir(keyFile), err)
+	}
+
+	b64PubKey := base64.StdEncoding.EncodeToString((*pubKey)[:])
+	b64PrivKey := base64.StdEncoding.EncodeToString((*privKey)[:])
+
+	err = ioutil.WriteFile(keyFile + ".pub", []byte(b64PubKey), 0600)
+	if err != nil {
+		return fmt.Errorf("unable to write public key: %s, error: %v", keyFile, err)
+	}
+
+	jsonKey := api.PrivateKey{
+		Type: "unlocked",
+		Data: api.PrivateKeyBytes{
+			Bytes: b64PrivKey,
+		},
+	}
+
+	var encoded []byte
+	encoded, err = json.Marshal(jsonKey)
+	if err != nil {
+		return fmt.Errorf("unable to encode private key: %v, error: %v", jsonKey, err)
+	}
+
+	err = ioutil.WriteFile(keyFile, encoded, 0600)
+	if err != nil {
+		return fmt.Errorf("unable to write private key: %s, error: %v", keyFile, err)
+	}
+	return nil
 }

@@ -1,25 +1,50 @@
 package server
 
 import (
-	"encoding/json"
 	"encoding/base64"
-	"fmt"
-	"net/http"
-	"gitlab.com/blk-io/crux/enclave"
-	"gitlab.com/blk-io/crux/api"
 	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"log"
+	"net/http"
 	"io/ioutil"
+	"strconv"
+	"gitlab.com/blk-io/crux/api"
+	"gitlab.com/blk-io/crux/enclave"
+	"gitlab.com/blk-io/crux/utils"
 )
 
 type TransactionManager struct {
 	Enclave enclave.Enclave
 }
 
-func (s *TransactionManager) Upcheck(w http.ResponseWriter, req *http.Request) {
+func Init(enc enclave.Enclave, port int) (TransactionManager, error) {
+	tm := TransactionManager{Enclave : enc}
+
+	httpServer := http.NewServeMux()
+	httpServer.HandleFunc("/upcheck", tm.upcheck)
+	httpServer.HandleFunc("/push", tm.push)
+	httpServer.HandleFunc("/resend", tm.resend)
+	httpServer.HandleFunc("/partyinfo", tm.partyInfo)
+
+	go log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), httpServer))
+
+	// Restricted to IPC
+	ipcServer := http.NewServeMux()
+	ipcServer.HandleFunc("/send", tm.send)
+	ipcServer.HandleFunc("/receive", tm.receive)
+	ipcServer.HandleFunc("/delete", tm.delete)
+
+	ipc, err := utils.CreateIpcSocket("")
+	go log.Fatal(http.Serve(ipc, ipcServer))
+	return tm, err
+}
+
+func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, "I'm up!")
 }
 
-func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 	var sendReq api.SendRequest
 	if err := json.NewDecoder(req.Body).Decode(&sendReq); err != nil {
 		invalidBody(w, req, err)
@@ -61,7 +86,7 @@ func (s *TransactionManager) Send(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *TransactionManager) Receive(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
 	var receiveReq api.ReceiveRequest
 	if err := json.NewDecoder(req.Body).Decode(&receiveReq); err != nil {
 		invalidBody(w, req, err)
@@ -92,7 +117,7 @@ func (s *TransactionManager) Receive(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) delete(w http.ResponseWriter, req *http.Request) {
 	var deleteReq api.DeleteRequest
 	if err := json.NewDecoder(req.Body).Decode(&deleteReq); err != nil {
 		invalidBody(w, req, err)
@@ -109,7 +134,7 @@ func (s *TransactionManager) Delete(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) push(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
@@ -124,7 +149,7 @@ func (s *TransactionManager) Push(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) resend(w http.ResponseWriter, req *http.Request) {
 	var resendReq api.ResendRequest
 	if err := json.NewDecoder(req.Body).Decode(&resendReq); err != nil {
 		invalidBody(w, req, err)
@@ -160,12 +185,13 @@ func (s *TransactionManager) Resend(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func (s *TransactionManager) PartyInfo(w http.ResponseWriter, req *http.Request) {
+func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
 		s.Enclave.UpdatePartyInfo(payload)
+		w.Write(s.Enclave.GetEncodedPartyInfo())
 	}
 }
 
@@ -189,3 +215,4 @@ func internalServerError(w http.ResponseWriter, message string) {
 	w.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(w, message)
 }
+

@@ -43,7 +43,7 @@ func Init(
 	// {"data":{"bytes":"Wl+xSyXVuuqzpvznOS7dOobhcn4C5auxkFRi7yLtgtA="},"type":"unlocked"}
 	privKeys, err := loadPrivKeys(privKeyFiles)
 	if err != nil {
-		log.Fatalf("Unable to load private key files: %s, error: %v", pubKeyFiles, err)
+		log.Fatalf("Unable to load private key files: %s, error: %v", privKeyFiles, err)
 	}
 
 	enc := Enclave{
@@ -92,26 +92,27 @@ func Init(
 func (s *Enclave) Store(
 	message *[]byte, sender string, recipients []string) ([]byte, error) {
 
+		var err error
 		var senderPubKey, senderPrivKey nacl.Key
 
 		if sender == "" {
 			// from address is either default or specified on communication
 			senderPubKey = s.PubKeys[0]
 			senderPrivKey = s.PrivKeys[0]
-		}
+		} else {
+			senderPubKey, err = nacl.Load(sender)
+			if err != nil {
+				log.WithField("senderPubKey", sender).Errorf(
+					"Unable to load sender public key, %v", err)
+				return nil, err
+			}
 
-		senderPubKey, err := nacl.Load(sender)
-		if err != nil {
-			log.WithField("senderPubKey", sender).Errorf(
-				"Unable to load sender public key, %v", err)
-			return nil, err
-		}
-
-		senderPrivKey, err = s.resolvePrivateKey(senderPubKey)
-		if err != nil {
-			log.WithField("senderPubKey", sender).Errorf(
-				"Unable to locate private key for sender public key, %v", err)
-			return nil, err
+			senderPrivKey, err = s.resolvePrivateKey(senderPubKey)
+			if err != nil {
+				log.WithField("senderPubKey", sender).Errorf(
+					"Unable to locate private key for sender public key, %v", err)
+				return nil, err
+			}
 		}
 
 		return s.store(message, senderPubKey, senderPrivKey, recipients)
@@ -128,15 +129,17 @@ func (s *Enclave) store(
 
 	sealedMessage := secretbox.Seal([]byte{}, *message, nonce, masterKey)
 
+	recipientCount := len(recipients)
+
 	encryptedPayload := api.EncryptedPayload {
 		Sender:         senderPubKey,
 		CipherText:     sealedMessage,
 		Nonce:          nonce,
-		RecipientBoxes: make([][]byte, len(recipients)),
+		RecipientBoxes: make([][]byte, recipientCount),
 		RecipientNonce: recipientNonce,
 	}
 
-	recipientsSlice := make([][]byte, len(recipients))
+	recipientsSlice := make([][]byte, recipientCount)
 
 	for i, recipient := range recipients {
 
@@ -144,12 +147,14 @@ func (s *Enclave) store(
 		if err != nil {
 			log.WithField("recipientKey", recipientKey).Errorf(
 				"Unable to load recipient, %v", err)
+			continue
 		}
 
 		// TODO: We may what to loosen this check
 		if bytes.Equal((*recipientKey)[:], (*senderPubKey)[:]) {
 			log.WithField("recipientKey", recipientKey).Errorf(
 				"Sender cannot be recipient, %v", err)
+			continue
 		}
 
 		sharedKey := s.resolveSharedKey(senderPrivKey, senderPubKey, recipientKey)
@@ -159,8 +164,18 @@ func (s *Enclave) store(
 		recipientsSlice[i] = []byte(recipient)
 	}
 
+	if recipientCount == 0 {
+		recipientsSlice = [][]byte{(*s.selfPubKey)[:]}
+	}
+
 	// store locally
-	sharedKey := s.resolveSharedKey(senderPrivKey, senderPubKey, s.selfPubKey)
+	recipientKey, err := toKey(recipientsSlice[0])
+	if err != nil {
+		log.WithField("recipientKey", recipientKey).Errorf(
+			"Unable to load recipient, %v", err)
+	}
+
+	sharedKey := s.resolveSharedKey(senderPrivKey, senderPubKey, recipientKey)
 
 	sealedBox := sealPayload(recipientNonce, masterKey, sharedKey)
 	encryptedPayload.RecipientBoxes = [][]byte{ sealedBox }
@@ -195,7 +210,11 @@ func (s *Enclave) publishPayload(epl api.EncryptedPayload, recipient string) {
 
 func (s *Enclave) resolveSharedKey(senderPrivKey, senderPubKey, recipientPubKey nacl.Key) nacl.Key {
 
-	keyCache := s.keyCache[senderPubKey]
+	keyCache, ok := s.keyCache[senderPubKey]
+	if !ok {
+		keyCache = make(map[nacl.Key]nacl.Key)
+		s.keyCache[senderPubKey] = keyCache
+	}
 
 	sharedKey, ok := keyCache[recipientPubKey]
 	if !ok {
@@ -280,13 +299,13 @@ func (s *Enclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	// need to recreate
 	sharedKey = s.resolveSharedKey(senderPrivKey, senderPubKey, recipientPubKey)
 
-	_, ok := secretbox.Open(masterKey[:], epl.RecipientBoxes[0], epl.RecipientNonce, sharedKey)
+	_, ok := secretbox.Open(masterKey[:0], epl.RecipientBoxes[0], epl.RecipientNonce, sharedKey)
 	if !ok {
 		return nil, errors.New("unable to open master key secret box")
 	}
 
-	payload := make([]byte, len(epl.CipherText))
-	_, ok = secretbox.Open(nil, epl.CipherText, epl.Nonce, masterKey)
+	var payload []byte
+	payload, ok = secretbox.Open(payload[:0], epl.CipherText, epl.Nonce, masterKey)
 	if !ok {
 		return payload, errors.New("unable to open payload secret box")
 	}
@@ -371,7 +390,7 @@ func loadPrivKeys(privKeyFiles []string) ([]nacl.Key, error) {
 			if err != nil {
 				return "", err
 			}
-			err = json.Unmarshal(src, privateKey)
+			err = json.Unmarshal(src, &privateKey)
 			if err != nil {
 				return "", err
 			}

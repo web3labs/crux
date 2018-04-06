@@ -3,14 +3,15 @@ package enclave
 import (
 	"bytes"
 	"io/ioutil"
+	"net/http"
 	"os"
+	"path"
 	"testing"
+	"time"
 	"gitlab.com/blk-io/crux/storage"
 	"gitlab.com/blk-io/crux/api"
-	"net/http"
 	"gitlab.com/blk-io/crux/utils"
 	"github.com/kevinburke/nacl"
-	"path"
 )
 
 var message = []byte("Test message")
@@ -360,11 +361,55 @@ func TestRetrieveForInvalid(t *testing.T) {
 }
 
 func TestRetrieveAllFor(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestRetrieveAllFor")
 
-}
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		defer os.RemoveAll(dbPath)
+	}
 
-func TestRetrieveAllForInvalid(t *testing.T) {
+	mockClient := &MockClient{requests: [][]byte{}}
+	var client utils.HttpClient
+	client = mockClient
 
+	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rcpt1 := pubKeys[0]
+
+	pi := api.CreatePartyInfo(
+		"http://localhost:8000",
+		[]string{"http://localhost:8001"},
+		[]nacl.Key{rcpt1},
+		client)
+
+	enc := initEnclave(t, dbPath, pi, client)
+
+	_, err = enc.Store(&message, []byte{}, [][]byte{(*rcpt1)[:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	message2 := []byte("Another message")
+	_, err = enc.Store(&message2, []byte{}, [][]byte{(*rcpt1)[:]})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rcpt1Key := (*rcpt1)[:]
+	err = enc.RetrieveAllFor(&rcpt1Key)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// we need to wait for the replay go-routines to complete
+	time.Sleep(1 * time.Millisecond)
+	if len(mockClient.requests) != 4 {
+		t.Errorf("Only one request should have been captured, actual: %d\n",
+			len(mockClient.requests))
+	}
 }
 
 func TestDoKeyGeneration(t *testing.T) {

@@ -73,7 +73,9 @@ func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {
 
 func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 	var sendReq api.SendRequest
-	if err := json.NewDecoder(req.Body).Decode(&sendReq); err != nil {
+	err := json.NewDecoder(req.Body).Decode(&sendReq)
+	req.Body.Close()
+	if err != nil {
 		invalidBody(w, req, err)
 		return
 	}
@@ -120,6 +122,7 @@ func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 	}
 
 	payload, err := ioutil.ReadAll(req.Body)
+	req.Body.Close()
 	if err != nil {
 		invalidBody(w, req, err)
 		return
@@ -132,7 +135,8 @@ func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	w.Write(key)
+	encodedKey := base64.StdEncoding.EncodeToString(key)
+	fmt.Fprint(w, encodedKey)
 }
 
 func (s *TransactionManager) processSend(
@@ -162,22 +166,25 @@ func (s *TransactionManager) processSend(
 
 func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
 	var receiveReq api.ReceiveRequest
-	if err := json.NewDecoder(req.Body).Decode(&receiveReq); err != nil {
+	err := json.NewDecoder(req.Body).Decode(&receiveReq)
+	req.Body.Close()
+	if err != nil {
 		invalidBody(w, req, err)
-	} else {
-		var payload []byte
-		payload, err = s.processReceive(w, req, receiveReq.Key, receiveReq.To)
+		return
+	}
 
-		if err != nil {
-			badRequest(w,
-				fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
-					receiveReq.Key, err))
-		} else {
-			encodedPayload := base64.StdEncoding.EncodeToString(payload)
-			sendResp := api.ReceiveResponse{Payload: encodedPayload}
-			json.NewEncoder(w).Encode(sendResp)
-			w.Header().Set("Content-Type", "application/json")
-		}
+	var payload []byte
+	payload, err = s.processReceive(w, req, receiveReq.Key, receiveReq.To)
+
+	if err != nil {
+		badRequest(w,
+			fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
+				receiveReq.Key, err))
+	} else {
+		encodedPayload := base64.StdEncoding.EncodeToString(payload)
+		sendResp := api.ReceiveResponse{Payload: encodedPayload}
+		json.NewEncoder(w).Encode(sendResp)
+		w.Header().Set("Content-Type", "application/json")
 	}
 }
 
@@ -215,8 +222,6 @@ func (s *TransactionManager) receiveRaw(w http.ResponseWriter, req *http.Request
 	w.Write(payload)
 }
 
-
-
 func (s *TransactionManager) processReceive(
 	w http.ResponseWriter, req *http.Request, b64Key, b64To string) ([]byte, error) {
 
@@ -234,75 +239,85 @@ func (s *TransactionManager) processReceive(
 
 func (s *TransactionManager) delete(w http.ResponseWriter, req *http.Request) {
 	var deleteReq api.DeleteRequest
-	if err := json.NewDecoder(req.Body).Decode(&deleteReq); err != nil {
+	err := json.NewDecoder(req.Body).Decode(&deleteReq)
+	req.Body.Close()
+	if err != nil {
 		invalidBody(w, req, err)
+		return
+	}
+	key, err := base64.StdEncoding.DecodeString(deleteReq.Key)
+	if err != nil {
+		decodeError(w, req, "key", deleteReq.Key, err)
 	} else {
-		key, err := base64.StdEncoding.DecodeString(deleteReq.Key)
+		err = s.Enclave.Delete(&key)
 		if err != nil {
-			decodeError(w, req, "key", deleteReq.Key, err)
-		} else {
-			err = s.Enclave.Delete(&key)
-			if err != nil {
-				badRequest(w, fmt.Sprintf("Unable to delete key: %s, error: %s\n", key, err))
-			}
+			badRequest(w, fmt.Sprintf("Unable to delete key: %s, error: %s\n", key, err))
 		}
 	}
 }
 
 func (s *TransactionManager) push(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
+	req.Body.Close()
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
-	} else {
-		digestHash, err := s.Enclave.StorePayload(payload)
-		if err != nil {
-			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
-		} else {
-			w.Write(digestHash)
-		}
+		return
 	}
+
+	digestHash, err := s.Enclave.StorePayload(payload)
+	if err != nil {
+		badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
+		return
+	}
+
+	w.Write(digestHash)
 }
 
 func (s *TransactionManager) resend(w http.ResponseWriter, req *http.Request) {
 	var resendReq api.ResendRequest
-	if err := json.NewDecoder(req.Body).Decode(&resendReq); err != nil {
+	err := json.NewDecoder(req.Body).Decode(&resendReq)
+	req.Body.Close()
+	if err != nil {
 		invalidBody(w, req, err)
-	} else {
-		var publicKey []byte
-		publicKey, err = base64.StdEncoding.DecodeString(resendReq.PublicKey)
+		return
+	}
+
+	var publicKey []byte
+	publicKey, err = base64.StdEncoding.DecodeString(resendReq.PublicKey)
+	if err != nil {
+		decodeError(w, req, "publicKey", resendReq.PublicKey, err)
+		return
+	}
+
+	if resendReq.Type == "all" {
+		err = s.Enclave.RetrieveAllFor(&publicKey)
 		if err != nil {
-			decodeError(w, req, "publicKey", resendReq.PublicKey, err)
+			invalidBody(w, req, err)
+		}
+	} else if resendReq.Type == "individual" {
+		var key []byte
+		key, err = base64.StdEncoding.DecodeString(resendReq.Key)
+		if err != nil {
+			decodeError(w, req, "key", resendReq.Key, err)
 			return
 		}
 
-		if resendReq.Type == "all" {
-			err = s.Enclave.RetrieveAllFor(&publicKey)
-			if err != nil {
-				invalidBody(w, req, err)
-			}
-		} else if resendReq.Type == "individual" {
-			var key []byte
-			key, err = base64.StdEncoding.DecodeString(resendReq.Key)
-			if err != nil {
-				decodeError(w, req, "key", resendReq.Key, err)
-				return
-			}
-
-			var encodedPl *[]byte
-			encodedPl, err = s.Enclave.RetrieveFor(&key, &publicKey)
-			if err != nil {
-				invalidBody(w, req, err)
-				return
-			}
-			w.Write(*encodedPl)
+		var encodedPl *[]byte
+		encodedPl, err = s.Enclave.RetrieveFor(&key, &publicKey)
+		if err != nil {
+			invalidBody(w, req, err)
+			return
 		}
+		w.Write(*encodedPl)
 	}
 }
 
 func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request) {
 	payload, err := ioutil.ReadAll(req.Body)
+	req.Body.Close()
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
+		return
 	} else {
 		s.Enclave.UpdatePartyInfo(payload)
 		w.Write(s.Enclave.GetEncodedPartyInfo())
@@ -310,7 +325,6 @@ func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request)
 }
 
 func invalidBody(w http.ResponseWriter, req *http.Request, err error) {
-	req.Body.Close()
 	badRequest(w, fmt.Sprintf("Invalid request: %s, error: %s\n", req.URL, err))
 }
 

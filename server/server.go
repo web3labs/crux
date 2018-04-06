@@ -34,8 +34,14 @@ const push = "/push"
 const resend = "/resend"
 const partyInfo = "/partyinfo"
 const send = "/send"
+const sendRaw = "/sendraw"
 const receive = "/receive"
+const receiveRaw = "receiveraw"
 const delete = "/delete"
+
+const hFrom = "c11n-from"
+const hTo = "c11n-to"
+const hKey = "c11n-key"
 
 func Init(enc Enclave, port int) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
@@ -51,7 +57,9 @@ func Init(enc Enclave, port int) (TransactionManager, error) {
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
 	ipcServer.HandleFunc(send, tm.send)
+	ipcServer.HandleFunc(sendRaw, tm.sendRaw)
 	ipcServer.HandleFunc(receive, tm.receive)
+	ipcServer.HandleFunc(receiveRaw, tm.receiveRaw)
 	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket("")
@@ -67,41 +75,89 @@ func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 	var sendReq api.SendRequest
 	if err := json.NewDecoder(req.Body).Decode(&sendReq); err != nil {
 		invalidBody(w, req, err)
+		return
+	}
+
+	payload, err := base64.StdEncoding.DecodeString(sendReq.Payload)
+	if err != nil {
+		decodeError(w, req, "payload", sendReq.Payload, err)
+		return
+	}
+
+	var key []byte
+	key, err = s.processSend(w, req, sendReq.From, sendReq.To, &payload)
+
+	if err != nil {
+		badRequest(w,
+			fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
+				key, payload, err))
 	} else {
-		payload, err := base64.StdEncoding.DecodeString(sendReq.Payload)
-		if err != nil {
-			decodeError(w, req, "payload", sendReq.Payload, err)
-			return
-		}
-		sender, err := base64.StdEncoding.DecodeString(sendReq.From)
-		if err != nil {
-			decodeError(w, req, "sender", sendReq.From, err)
-			return
-		}
+		encodedKey := base64.StdEncoding.EncodeToString(key)
+		sendResp := api.SendResponse{Key: encodedKey}
+		json.NewEncoder(w).Encode(sendResp)
+		w.Header().Set("Content-Type", "application/json")
+	}
+}
 
-		recipients := make([][]byte, len(sendReq.To))
-		for _, value := range sendReq.To {
-			recipient, err := base64.StdEncoding.DecodeString(value)
-			if err != nil {
-				decodeError(w, req, "recipient", value, err)
-				return
-			} else {
-				recipients = append(recipients, recipient)
-			}
-		}
+func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 
-		key, err := s.Enclave.Store(&payload, sender, recipients)
+	var from string
+	hFrom, ok := req.Header[hFrom]
+	if !ok {
+		from = ""
+	}
+
+	if len(hFrom) == 1 {
+		from = hFrom[0]
+	} else {
+		from = ""
+	}
+
+	var to []string
+	to, ok = req.Header[hTo]
+	if !ok {
+		to = []string{}
+	}
+
+	payload, err := ioutil.ReadAll(req.Body)
+	if err != nil {
+		invalidBody(w, req, err)
+		return
+	}
+
+	var key []byte
+	key, err = s.processSend(w, req, from, to, &payload)
+	if err != nil {
+		internalServerError(w, "Unable to process request")
+		return
+	}
+
+	w.Write(key)
+}
+
+func (s *TransactionManager) processSend(
+	w http.ResponseWriter, req *http.Request,
+	b64from string,
+	b64recipients []string,
+	payload *[]byte) ([]byte, error) {
+	sender, err := base64.StdEncoding.DecodeString(b64from)
+	if err != nil {
+		decodeError(w, req, "sender", b64from, err)
+		return nil, err
+	}
+
+	recipients := make([][]byte, len(b64recipients))
+	for _, value := range b64recipients {
+		recipient, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
-			badRequest(w,
-				fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
-					key, payload, err))
+			decodeError(w, req, "recipient", value, err)
+			return nil, err
 		} else {
-			encodedKey := base64.StdEncoding.EncodeToString(key)
-			sendResp := api.SendResponse{Key: encodedKey}
-			json.NewEncoder(w).Encode(sendResp)
-			w.Header().Set("Content-Type", "application/json")
+			recipients = append(recipients, recipient)
 		}
 	}
+
+	return s.Enclave.Store(payload, sender, recipients)
 }
 
 func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
@@ -109,19 +165,9 @@ func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
 	if err := json.NewDecoder(req.Body).Decode(&receiveReq); err != nil {
 		invalidBody(w, req, err)
 	} else {
-		key, err := base64.StdEncoding.DecodeString(receiveReq.Key)
-		if err != nil {
-			decodeError(w, req, "key", receiveReq.Key, err)
-			return
-		}
-		to, err := base64.StdEncoding.DecodeString(receiveReq.To)
-		if err != nil {
-			decodeError(w, req, "to", receiveReq.Key, err)
-			return
-		}
-
 		var payload []byte
-		payload, err = s.Enclave.Retrieve(&key, &to)
+		payload, err = s.processReceive(w, req, receiveReq.Key, receiveReq.To)
+
 		if err != nil {
 			badRequest(w,
 				fmt.Sprintf("Unable to retrieve payload for key: %s, error: %s\n",
@@ -133,6 +179,57 @@ func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 		}
 	}
+}
+
+func (s *TransactionManager) receiveRaw(w http.ResponseWriter, req *http.Request) {
+
+	keyHeader, ok := req.Header[hKey]
+	if !ok {
+		badRequest(w, "key not specified")
+		return
+	}
+
+	if len(keyHeader) != 1 {
+		badRequest(w, "Only a single key should be provided")
+		return
+	}
+	key := keyHeader[0]
+
+	var toHeader []string
+	toHeader, ok = req.Header[hTo]
+
+	var to string
+	if !ok || len(toHeader) != 1 {
+		to = ""
+	} else {
+		to = toHeader[0]
+	}
+
+	payload, err := s.processReceive(w, req, key, to)
+
+	if err != nil {
+		badRequest(w, fmt.Sprintln(err))
+		return
+	}
+
+	w.Write(payload)
+}
+
+
+
+func (s *TransactionManager) processReceive(
+	w http.ResponseWriter, req *http.Request, b64Key, b64To string) ([]byte, error) {
+
+	key, err := base64.StdEncoding.DecodeString(b64Key)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode key: %s", b64Key)
+	}
+	to, err := base64.StdEncoding.DecodeString(b64To)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode to: %s", b64Key)
+	}
+
+	return s.Enclave.Retrieve(&key, &to)
 }
 
 func (s *TransactionManager) delete(w http.ResponseWriter, req *http.Request) {

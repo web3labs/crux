@@ -99,6 +99,16 @@ func TestSend(t *testing.T) {
 	}
 }
 
+func TestSendRaw(t *testing.T) {
+	tm := TransactionManager{Enclave: &MockEnclave{}}
+
+	headers := make(http.Header)
+	headers[hFrom] = []string{sender}
+	headers[hTo] = []string{receiver}
+
+	runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
+}
+
 func TestReceive(t *testing.T) {
 
 	receiveReqs := []api.ReceiveRequest{
@@ -116,6 +126,16 @@ func TestReceive(t *testing.T) {
 	for _, receiveReq := range receiveReqs {
 		runJsonHandlerTest(t, &receiveReq, &response, &expected, receive, tm.receive)
 	}
+}
+
+func TestReceivedRaw(t *testing.T) {
+	tm := TransactionManager{Enclave: &MockEnclave{}}
+
+	headers := make(http.Header)
+	headers[hKey] = []string{encodedPayload}
+	headers[hTo] = []string{receiver}
+
+	runRawHandlerTest(t, headers, payload, payload, receiveRaw, tm.receiveRaw)
 }
 
 func TestPush(t *testing.T) {
@@ -204,6 +224,40 @@ func runJsonHandlerTest(
 		t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 	}
 }
+
+func runRawHandlerTest(
+	t *testing.T,
+	headers http.Header,
+	payload, expected []byte,
+	url string,
+	handlerFunc http.HandlerFunc) {
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range headers {
+		req.Header[k] = v
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler := http.HandlerFunc(handlerFunc)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	response := rr.Body.Bytes()
+
+	if !reflect.DeepEqual(response, expected) {
+		t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+	}
+}
+
 
 func TestResendIndividual(t *testing.T) {
 	resendReq := api.ResendRequest{

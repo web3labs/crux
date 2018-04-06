@@ -72,7 +72,7 @@ func EncodePartyInfo(pi PartyInfo) []byte {
 
 	for recipient, url := range pi.recipients {
 		tuple := [][]byte{
-			[]byte(recipient),
+			recipient[:],
 			[]byte(url),
 		}
 		encoded, offset = writeSliceOfSlice(tuple, encoded, offset)
@@ -89,9 +89,9 @@ func EncodePartyInfo(pi PartyInfo) []byte {
 	return encoded
 }
 
-func DecodePartyInfo(encoded []byte) PartyInfo {
+func DecodePartyInfo(encoded []byte) (PartyInfo, error) {
 	pi := PartyInfo{
-		recipients: make(map[string]string),
+		recipients: make(map[[nacl.KeySize]byte]string),
 		parties:    make(map[string]bool),
 	}
 
@@ -104,7 +104,11 @@ func DecodePartyInfo(encoded []byte) PartyInfo {
 	for i := 0; i < size; i++ {
 		var kv [][]byte
 		kv, offset = readSliceOfSlice(encoded, offset)
-		pi.recipients[string(kv[0])] = string(kv[1])
+		key, err := utils.ToKey(kv[0])
+		if err != nil {
+			return PartyInfo{}, err
+		}
+		pi.recipients[*key] = string(kv[1])
 	}
 
 	var parties [][]byte
@@ -113,7 +117,7 @@ func DecodePartyInfo(encoded []byte) PartyInfo {
 		pi.parties[string(party)] = true
 	}
 
-	return pi
+	return pi, nil
 }
 
 func writeInt(v int, dest []byte, offset int) ([]byte, int) {

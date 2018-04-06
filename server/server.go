@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -17,6 +16,8 @@ import (
 type TransactionManager struct {
 	Enclave enclave.Enclave
 }
+
+const upCheckResponse = "I'm up!"
 
 func Init(enc enclave.Enclave, port int) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
@@ -41,7 +42,7 @@ func Init(enc enclave.Enclave, port int) (TransactionManager, error) {
 }
 
 func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {
-	fmt.Fprint(w, "I'm up!")
+	fmt.Fprint(w, upCheckResponse)
 }
 
 func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
@@ -54,21 +55,20 @@ func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 			decodeError(w, req, "payload", sendReq.Payload, err)
 			return
 		}
-		decoded, err := base64.StdEncoding.DecodeString(sendReq.From)
+		sender, err := base64.StdEncoding.DecodeString(sendReq.From)
 		if err != nil {
 			decodeError(w, req, "sender", sendReq.From, err)
 			return
 		}
-		sender := hex.EncodeToString(decoded)
 
-		recipients := make([]string, len(sendReq.To))
+		recipients := make([][]byte, len(sendReq.To))
 		for _, value := range sendReq.To {
 			recipient, err := base64.StdEncoding.DecodeString(value)
 			if err != nil {
 				decodeError(w, req, "recipient", value, err)
 				return
 			} else {
-				recipients = append(recipients, hex.EncodeToString(recipient))
+				recipients = append(recipients, recipient)
 			}
 		}
 

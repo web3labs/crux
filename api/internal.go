@@ -8,6 +8,7 @@ import (
 	"time"
 	log "github.com/sirupsen/logrus"
 	"github.com/kevinburke/nacl"
+	"gitlab.com/blk-io/crux/utils"
 )
 
 type EncryptedPayload struct {
@@ -21,16 +22,17 @@ type EncryptedPayload struct {
 type PartyInfo struct {
 	url string
 	// public key -> URL
-	recipients map[string]string
+	recipients map[[nacl.KeySize]byte]string
 	parties    map[string]bool // URLs
+	client     utils.HttpClient
 }
 
-func (s *PartyInfo) GetRecipient(key string) (string, bool) {
-	value, ok := s.recipients[key]
+func (s *PartyInfo) GetRecipient(key nacl.Key) (string, bool) {
+	value, ok := s.recipients[*key]
 	return value, ok
 }
 
-func LoadPartyInfo(url string, otherNodes []string) PartyInfo {
+func InitPartyInfo(url string, otherNodes []string, client utils.HttpClient) PartyInfo {
 	parties := make(map[string]bool)
 	for _, node := range otherNodes {
 		parties[node] = true
@@ -38,10 +40,33 @@ func LoadPartyInfo(url string, otherNodes []string) PartyInfo {
 
 	return PartyInfo{
 		url:        url,
-		recipients: make(map[string]string),
+		recipients: make(map[[nacl.KeySize]byte]string),
 		parties:    parties,
+		client:     client,
 	}
 }
+
+func CreatePartyInfo(
+	url string,
+	otherNodes []string,
+	otherKeys []nacl.Key,
+	client utils.HttpClient) PartyInfo {
+
+	recipients := make(map[[nacl.KeySize]byte]string)
+	parties := make(map[string]bool)
+	for i, node := range otherNodes {
+		parties[node] = true
+		recipients[*otherKeys[i]] = node
+	}
+
+	return PartyInfo{
+		url:        url,
+		recipients: recipients,
+		parties:    parties,
+		client:     client,
+	}
+}
+
 
 func (s *PartyInfo) GetPartyInfo() {
 	encodedPartyInfo := EncodePartyInfo(*s)
@@ -53,8 +78,15 @@ func (s *PartyInfo) GetPartyInfo() {
 	}
 
 	for url := range urls {
-		resp, err := http.Post(
-			url + "/partyinfo", "application/octet-stream", bytes.NewReader(encodedPartyInfo))
+		req, err := http.NewRequest("POST", url + "/partyinfo", bytes.NewReader(encodedPartyInfo))
+		if err != nil {
+			log.WithField("url", url).Errorf(
+				"Error sending /partyinfo request, %v", err)
+			break
+		}
+		req.Header.Set("Content-Type", "application/octet-stream")
+
+		resp, err := s.client.Do(req)
 		if err != nil {
 			log.WithField("url", url).Errorf(
 				"Error sending /partyinfo request, %v", err)
@@ -95,7 +127,12 @@ func (s *PartyInfo) PollPartyInfo() {
 // by a response from us hitting another nodes /partyinfo endpoint
 // TODO: Control access via a channel for updates
 func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
-	pi := DecodePartyInfo(encoded)
+	pi, err := DecodePartyInfo(encoded)
+
+	if err != nil {
+		log.WithField("encoded", encoded).Errorf(
+			"Unable to decode party info, error: %v", err)
+	}
 
 	for publicKey, url := range pi.recipients {
 		// we should ignore messages about ourselves
@@ -115,10 +152,15 @@ func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 	}
 }
 
-func Push(encoded []byte, url string) (string, error) {
+func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 
-	resp, err := http.Post(
-		url + "/push", "application/octet-stream", bytes.NewReader(encoded))
+	req, err := http.NewRequest("POST", url + "/push", bytes.NewReader(encoded))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}

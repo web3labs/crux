@@ -27,12 +27,14 @@ type Enclave struct {
 	selfPubKey nacl.Key
 	PartyInfo  api.PartyInfo
 	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // maps sender -> recipient -> shared key
+	client     utils.HttpClient
 }
 
 func Init(
 	db storage.DataStore,
 	pubKeyFiles, privKeyFiles []string,
-	pi api.PartyInfo) Enclave {
+	pi api.PartyInfo,
+	client utils.HttpClient) Enclave {
 
 	// BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=
 	pubKeys, err := loadPubKeys(pubKeyFiles)
@@ -51,6 +53,7 @@ func Init(
 		PubKeys: pubKeys,
 		PrivKeys: privKeys,
 		PartyInfo: pi,
+		client: client,
 	}
 
 	enc.keyCache = make(map[nacl.Key]map[nacl.Key]nacl.Key)
@@ -90,17 +93,17 @@ func Init(
 }
 
 func (s *Enclave) Store(
-	message *[]byte, sender string, recipients []string) ([]byte, error) {
+	message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
 
 		var err error
 		var senderPubKey, senderPrivKey nacl.Key
 
-		if sender == "" {
+		if len(sender) == 0 {
 			// from address is either default or specified on communication
 			senderPubKey = s.PubKeys[0]
 			senderPrivKey = s.PrivKeys[0]
 		} else {
-			senderPubKey, err = nacl.Load(sender)
+			senderPubKey, err = utils.ToKey(sender)
 			if err != nil {
 				log.WithField("senderPubKey", sender).Errorf(
 					"Unable to load sender public key, %v", err)
@@ -121,7 +124,7 @@ func (s *Enclave) Store(
 func (s *Enclave) store(
 	message *[]byte,
 	senderPubKey, senderPrivKey nacl.Key,
-	recipients []string) ([]byte, error) {
+	recipients [][]byte) ([]byte, error) {
 
 	nonce := nacl.NewNonce()
 	masterKey := nacl.NewKey()
@@ -139,11 +142,9 @@ func (s *Enclave) store(
 		RecipientNonce: recipientNonce,
 	}
 
-	recipientsSlice := make([][]byte, recipientCount)
-
 	for i, recipient := range recipients {
 
-		recipientKey, err := nacl.Load(recipient)
+		recipientKey, err := utils.ToKey(recipient)
 		if err != nil {
 			log.WithField("recipientKey", recipientKey).Errorf(
 				"Unable to load recipient, %v", err)
@@ -161,15 +162,14 @@ func (s *Enclave) store(
 		sealedBox := sealPayload(recipientNonce, masterKey, sharedKey)
 
 		encryptedPayload.RecipientBoxes[i] = sealedBox
-		recipientsSlice[i] = []byte(recipient)
 	}
 
 	if recipientCount == 0 {
-		recipientsSlice = [][]byte{(*s.selfPubKey)[:]}
+		recipients = [][]byte{(*s.selfPubKey)[:]}
 	}
 
 	// store locally
-	recipientKey, err := toKey(recipientsSlice[0])
+	recipientKey, err := utils.ToKey(recipients[0])
 	if err != nil {
 		log.WithField("recipientKey", recipientKey).Errorf(
 			"Unable to load recipient, %v", err)
@@ -180,7 +180,7 @@ func (s *Enclave) store(
 	sealedBox := sealPayload(recipientNonce, masterKey, sharedKey)
 	encryptedPayload.RecipientBoxes = [][]byte{ sealedBox }
 
-	encodedEpl := api.EncodePayloadWithRecipients(encryptedPayload, recipientsSlice)
+	encodedEpl := api.EncodePayloadWithRecipients(encryptedPayload, recipients)
 	digest, err := s.storePayload(encryptedPayload, encodedEpl)
 
 	for i, recipient := range recipients {
@@ -198,11 +198,17 @@ func (s *Enclave) store(
 	return digest, err
 }
 
-func (s *Enclave) publishPayload(epl api.EncryptedPayload, recipient string) {
+func (s *Enclave) publishPayload(epl api.EncryptedPayload, recipient []byte) {
 
-	if url, ok := s.PartyInfo.GetRecipient(recipient); ok {
+	key, err := utils.ToKey(recipient)
+	if err != nil {
+		log.WithField("recipient", recipient).Errorf(
+			"Unable to decode key for recipient, error: %v", err)
+	}
+
+	if url, ok := s.PartyInfo.GetRecipient(key); ok {
 		encoded := api.EncodePayloadWithRecipients(epl, [][]byte{})
-		api.Push(encoded, url)
+		api.Push(encoded, url, s.client)
 	} else {
 		log.WithField("recipientKey", recipient).Error("Unable to resolve host")
 	}
@@ -277,14 +283,14 @@ func (s *Enclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	if len(recipients) == 0 {
 		// This is a payload originally sent to us by another node
 		recipientPubKey = epl.Sender
-		senderPubKey, err = toKey(*to)
+		senderPubKey, err = utils.ToKey(*to)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		// This is a payload that originated from us
 		senderPubKey = epl.Sender
-		recipientPubKey, err = toKey(recipients[0])
+		recipientPubKey, err = utils.ToKey(recipients[0])
 		if err != nil {
 			return nil, err
 		}
@@ -350,7 +356,7 @@ func (s *Enclave) RetrieveAllFor(reqRecipient *[]byte) error {
 					RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
 					RecipientNonce: epl.RecipientNonce,
 				}
-				go s.publishPayload(recipientEpl, string(*reqRecipient))
+				go s.publishPayload(recipientEpl, *reqRecipient)
 			}
 		}
 	})
@@ -358,15 +364,6 @@ func (s *Enclave) RetrieveAllFor(reqRecipient *[]byte) error {
 
 func (s *Enclave) Delete(digestHash *[]byte) error {
 	return s.Db.Delete(digestHash)
-}
-
-func toKey(src []byte) (nacl.Key, error) {
-	if len(src) != nacl.KeySize {
-		return nil, fmt.Errorf("nacl: incorrect key length: %d", len(src))
-	}
-	key := new([nacl.KeySize]byte)
-	copy(key[:], src)
-	return key, nil
 }
 
 func loadPubKeys(pubKeyFiles []string) ([]nacl.Key, error) {
@@ -409,7 +406,7 @@ func loadKeys(
 			return nil, err
 		}
 		var key nacl.Key
-		key, err = loadBase64Key(
+		key, err = utils.LoadBase64Key(
 			strings.TrimSuffix(data, "\n"))
 		if err != nil {
 			return nil, err
@@ -418,15 +415,6 @@ func loadKeys(
 	}
 
 	return keys, nil
-}
-
-func loadBase64Key(key string) (nacl.Key, error) {
-	src, err := base64.StdEncoding.DecodeString(key)
-	if err != nil {
-		return nil, err
-	}
-
-	return toKey(src)
 }
 
 func DoKeyGeneration(keyFile string) error {

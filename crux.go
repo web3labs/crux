@@ -10,6 +10,7 @@ import (
 	"gitlab.com/blk-io/crux/enclave"
 	"gitlab.com/blk-io/crux/server"
 	"gitlab.com/blk-io/crux/storage"
+	"net/http"
 )
 
 func main() {
@@ -57,7 +58,7 @@ func main() {
 		log.Fatalln("URL must be specified")
 	}
 
-	pi := api.LoadPartyInfo(url, otherNodes)
+	pi := api.InitPartyInfo(url, otherNodes, http.DefaultClient)
 
 	privKeyFiles := config.GetStringSlice(config.PrivateKeys)
 	pubKeyFiles := config.GetStringSlice(config.PublicKeys)
@@ -70,7 +71,7 @@ func main() {
 		log.Fatalln("Node key files must be provided")
 	}
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi)
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
 
 	port := config.GetInt(config.Port)
 	if port < 0 {

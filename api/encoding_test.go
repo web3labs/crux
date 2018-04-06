@@ -1,9 +1,10 @@
 package api
 
 import (
+	"reflect"
 	"testing"
 	"github.com/kevinburke/nacl"
-	"reflect"
+	"gitlab.com/blk-io/crux/utils"
 )
 
 func TestEncodePayload(t *testing.T) {
@@ -72,14 +73,14 @@ func TestEncodePartyInfo(t *testing.T) {
 
 	pi := PartyInfo{
 		url: "https://127.0.0.4:9004/",
-		recipients: map[string]string{
-			"ROAZBWtSacxXQrOe3FGAqJDyJjFePR5ce4TSIzmJ0Bc=": "https://127.0.0.7:9007/",
-			"BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=": "https://127.0.0.1:9001/",
-			"QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc=": "https://127.0.0.2:9002/",
-			"1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg=": "https://127.0.0.3:9003/",
-			"UfNSeSGySeKg11DVNEnqrUtxYRVor4+CvluI8tVv62Y=": "https://127.0.0.6:9006/",
-			"oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8=": "https://127.0.0.4:9004/",
-			"R56gy4dn24YOjwyesTczYa8m5xhP6hF2uTMCju/1xkY=": "https://127.0.0.5:9005/",
+		recipients: map[[nacl.KeySize]byte]string{
+			toKey("ROAZBWtSacxXQrOe3FGAqJDyJjFePR5ce4TSIzmJ0Bc="): "https://127.0.0.7:9007/",
+			toKey("BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="): "https://127.0.0.1:9001/",
+			toKey("QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc="): "https://127.0.0.2:9002/",
+			toKey("1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg="): "https://127.0.0.3:9003/",
+			toKey("UfNSeSGySeKg11DVNEnqrUtxYRVor4+CvluI8tVv62Y="): "https://127.0.0.6:9006/",
+			toKey("oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8="): "https://127.0.0.4:9004/",
+			toKey("R56gy4dn24YOjwyesTczYa8m5xhP6hF2uTMCju/1xkY="): "https://127.0.0.5:9005/",
 		},
 		parties: map[string]bool{
 			"https://127.0.0.5:9005/": true,
@@ -93,9 +94,18 @@ func TestEncodePartyInfo(t *testing.T) {
 	}
 
 	encoded := EncodePartyInfo(pi)
-	decoded := DecodePartyInfo(encoded)
+	decoded, err := DecodePartyInfo(encoded)
+
+	if err != nil {
+		t.Fatalf("Unable to decode party info")
+	}
 
 	if !reflect.DeepEqual(pi, decoded) {
 		t.Errorf("Decoded partyInfo: %v does not match input %v", decoded, pi)
 	}
+}
+
+func toKey(encodedKey string) [nacl.KeySize]byte {
+	key, _ := utils.LoadBase64Key(encodedKey)
+	return *key
 }

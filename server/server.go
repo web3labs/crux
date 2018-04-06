@@ -9,32 +9,50 @@ import (
 	"io/ioutil"
 	"strconv"
 	"gitlab.com/blk-io/crux/api"
-	"gitlab.com/blk-io/crux/enclave"
 	"gitlab.com/blk-io/crux/utils"
 )
 
+type Enclave interface {
+	Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error)
+	StorePayload(encoded []byte) ([]byte, error)
+	Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error)
+	RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error)
+	RetrieveAllFor(reqRecipient *[]byte) error
+	Delete(digestHash *[]byte) error
+	UpdatePartyInfo(encoded []byte)
+	GetEncodedPartyInfo() []byte
+}
+
 type TransactionManager struct {
-	Enclave enclave.Enclave
+	Enclave Enclave
 }
 
 const upCheckResponse = "I'm up!"
 
-func Init(enc enclave.Enclave, port int) (TransactionManager, error) {
+const upCheck = "/upcheck"
+const push = "/push"
+const resend = "/resend"
+const partyInfo = "/partyinfo"
+const send = "/send"
+const receive = "/receive"
+const delete = "/delete"
+
+func Init(enc Enclave, port int) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 
 	httpServer := http.NewServeMux()
-	httpServer.HandleFunc("/upcheck", tm.upcheck)
-	httpServer.HandleFunc("/push", tm.push)
-	httpServer.HandleFunc("/resend", tm.resend)
-	httpServer.HandleFunc("/partyinfo", tm.partyInfo)
+	httpServer.HandleFunc(upCheck, tm.upcheck)
+	httpServer.HandleFunc(push, tm.push)
+	httpServer.HandleFunc(resend, tm.resend)
+	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
 	go log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), httpServer))
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
-	ipcServer.HandleFunc("/send", tm.send)
-	ipcServer.HandleFunc("/receive", tm.receive)
-	ipcServer.HandleFunc("/delete", tm.delete)
+	ipcServer.HandleFunc(send, tm.send)
+	ipcServer.HandleFunc(receive, tm.receive)
+	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket("")
 	go log.Fatal(http.Serve(ipc, ipcServer))
@@ -79,7 +97,7 @@ func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 					key, payload, err))
 		} else {
 			encodedKey := base64.StdEncoding.EncodeToString(key)
-			sendResp := api.SendResponse{Key : encodedKey}
+			sendResp := api.SendResponse{Key: encodedKey}
 			json.NewEncoder(w).Encode(sendResp)
 			w.Header().Set("Content-Type", "application/json")
 		}
@@ -143,8 +161,7 @@ func (s *TransactionManager) push(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			badRequest(w, fmt.Sprintf("Unable to store payload, error: %s\n", err))
 		} else {
-			encodedDigestHash := base64.StdEncoding.EncodeToString(digestHash)
-			fmt.Fprintf(w, "%s", encodedDigestHash)
+			w.Write(digestHash)
 		}
 	}
 }
@@ -190,8 +207,8 @@ func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request)
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
 	} else {
-		s.Enclave.PartyInfo.UpdatePartyInfo(payload)
-		w.Write(api.EncodePartyInfo(s.Enclave.PartyInfo))
+		s.Enclave.UpdatePartyInfo(payload)
+		w.Write(s.Enclave.GetEncodedPartyInfo())
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"gitlab.com/blk-io/crux/utils"
 	"github.com/kevinburke/nacl"
+	"path"
 )
 
 var message = []byte("Test message")
@@ -32,7 +33,8 @@ func initEnclave(
 	t *testing.T,
 	dbPath string,
 	pi api.PartyInfo,
-	client utils.HttpClient) Enclave {
+	client utils.HttpClient) *SecureEnclave {
+
 	db, err := storage.Init(dbPath)
 	if err != nil {
 		t.Fatal(err)
@@ -47,7 +49,7 @@ func initEnclave(
 }
 
 func initDefaultEnclave(t *testing.T,
-	dbPath string) Enclave {
+	dbPath string) *SecureEnclave {
 
 	var client utils.HttpClient
 	client = &MockClient{}
@@ -71,8 +73,11 @@ func TestStoreAndRetrieve(t *testing.T) {
 	var client utils.HttpClient
 	client = mockClient
 
-	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub", "testdata/rcpt2.pub"})
-	rcpt1 := pubKeys[1]
+	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rcpt1 := pubKeys[0]
 
 	pi := api.CreatePartyInfo(
 		"http://localhost:8000",
@@ -98,13 +103,14 @@ func TestStoreAndRetrieve(t *testing.T) {
 			message, returned)
 	}
 
-	// Verify payload propagation too
+	// We verify payload propagation too
 	if len(mockClient.requests) != 1 {
 		t.Errorf("Only one request should have been captured, actual: %d\n",
 			len(mockClient.requests))
 	}
 
-	epl, recipients := api.DecodePayloadWithRecipients(mockClient.requests[0])
+	propagatedPl := mockClient.requests[0]
+	epl, recipients := api.DecodePayloadWithRecipients(propagatedPl)
 
 	if len(recipients) != 0 {
 		t.Errorf("Recipients should be empty in data sent to other nodes, actual size: %d\n",
@@ -114,6 +120,38 @@ func TestStoreAndRetrieve(t *testing.T) {
 	if len(epl.RecipientBoxes) != 1 {
 		t.Errorf("There should only be one recipient box present, actual %d\n",
 			len(epl.RecipientBoxes))
+	}
+
+	// Then we simulate the propagation and retrieval by the client
+	db, err := storage.Init(dbPath + "2")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	enc2 := Init(
+		db,
+		[]string{"testdata/rcpt1.pub"},
+		[]string{"testdata/rcpt1"},
+		pi,
+		client)
+
+	var digest2 []byte
+	digest2, err = enc2.StorePayload(propagatedPl)
+
+	if !bytes.Equal(digest, digest2) {
+		t.Errorf("Local and propgated digests should be equal, local: %v, propagated: %v\n",
+			digest, digest2)
+	}
+
+	var returned2 []byte
+	to := (*rcpt1)[:]
+	returned2, err = enc2.Retrieve(&digest2, &to)
+
+	if !bytes.Equal(message, returned2) {
+		t.Errorf(
+			"Retrieved message is not the same as original:\n" +
+				"Original: %v\nRetrieved: %v",
+			message, returned)
 	}
 }
 
@@ -156,11 +194,14 @@ func TestStoreNotAuthorised(t *testing.T) {
 	enc := initDefaultEnclave(t, dbPath)
 
 	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	rcpt1 := pubKeys[0]
 
 	_, err = enc.Store(&message, (*rcpt1)[:], [][]byte{(*rcpt1)[:]})
 	if err == nil {
-		t.Error("Enclave is not authorised to store messages")
+		t.Error("SecureEnclave is not authorised to store messages")
 	}
 }
 
@@ -197,6 +238,9 @@ func TestRetrieveNotAuthorised(t *testing.T) {
 	enc := initDefaultEnclave(t, dbPath)
 
 	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub", "testdata/rcpt2.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	rcpt1 := pubKeys[0]
 	rcpt2 := pubKeys[1]
 
@@ -216,5 +260,136 @@ func TestRetrieveNotAuthorised(t *testing.T) {
 			"Retrieved message is not the same as original:\n" +
 				"Original: %v\nRetrieved: %v",
 			message, returned)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestDelete")
+
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		defer os.RemoveAll(dbPath)
+	}
+
+	enc := initDefaultEnclave(t, dbPath)
+
+	digest, err := enc.Store(&message, []byte{}, [][]byte{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var returned []byte
+	returned, err = enc.Retrieve(&digest, nil)
+
+	if !bytes.Equal(message, returned) {
+		t.Errorf(
+			"Retrieved message is not the same as original:\n" +
+				"Original: %v\nRetrieved: %v",
+			message, returned)
+	}
+
+	err = enc.Delete(&digest)
+	if err != nil {
+		t.Errorf("Unable to delete payload for key: %v\n", &digest)
+	}
+
+	_, err = enc.Retrieve(&digest, nil)
+	if err == nil {
+		t.Errorf("No error returned requesting invalid payload")
+	}
+}
+
+func TestRetrieveFor(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestRetrieveFor")
+
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		defer os.RemoveAll(dbPath)
+	}
+
+	enc := initDefaultEnclave(t, dbPath)
+
+	pubKeys, err := loadPubKeys([]string{"testdata/rcpt1.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rcpt1 := (*pubKeys[0])[:]
+
+	digest, err := enc.Store(&message, []byte{}, [][]byte{rcpt1})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var returned *[]byte
+	returned, err = enc.RetrieveFor(&digest, &rcpt1)
+
+	epl := api.DecodePayload(*returned)
+
+	if len(epl.RecipientBoxes) != 1 {
+		t.Errorf("Retrieved record does not contain a single box, total: %d",
+			len(epl.RecipientBoxes))
+	}
+}
+
+func TestRetrieveForInvalid(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestRetrieveFor")
+
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		defer os.RemoveAll(dbPath)
+	}
+
+	enc := initDefaultEnclave(t, dbPath)
+
+	var pubKeys []nacl.Key
+	pubKeys, err = loadPubKeys([]string{"testdata/rcpt1.pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rcpt1 := (*pubKeys[0])[:]
+
+	digest := []byte("Invalid")
+	_, err = enc.RetrieveFor(&digest, &rcpt1)
+
+	if err == nil {
+		t.Error("No error returned requesting invalid payload")
+	}
+}
+
+func TestRetrieveAllFor(t *testing.T) {
+
+}
+
+func TestRetrieveAllForInvalid(t *testing.T) {
+
+}
+
+func TestDoKeyGeneration(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestDoKeyGeneration")
+
+	if err != nil {
+		t.Fatal(err)
+	} else {
+		defer os.RemoveAll(dbPath)
+	}
+
+	keyFiles := path.Join(dbPath, "testKey")
+	err = DoKeyGeneration(keyFiles)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = loadPubKeys([]string{keyFiles + ".pub"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = loadPrivKeys([]string{keyFiles})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

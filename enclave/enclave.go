@@ -17,6 +17,7 @@ import (
 	"gitlab.com/blk-io/crux/storage"
 	"gitlab.com/blk-io/crux/api"
 	"gitlab.com/blk-io/crux/utils"
+	"encoding/hex"
 )
 
 type SecureEnclave struct {
@@ -213,7 +214,7 @@ func (s *SecureEnclave) publishPayload(epl api.EncryptedPayload, recipient []byt
 		encoded := api.EncodePayloadWithRecipients(epl, [][]byte{})
 		api.Push(encoded, url, s.client)
 	} else {
-		log.WithField("recipientKey", recipient).Error("Unable to resolve host")
+		log.WithField("recipientKey", hex.EncodeToString(recipient)).Error("Unable to resolve host")
 	}
 }
 
@@ -240,7 +241,8 @@ func (s *SecureEnclave) resolvePrivateKey(publicKey nacl.Key) (nacl.Key, error) 
 			return s.PrivKeys[i], nil
 		}
 	}
-	return nil, errors.New("unable to find private key for public key")
+	return nil, fmt.Errorf("unable to find private key for public key: %s",
+		hex.EncodeToString((*publicKey)[:]))
 }
 
 func (s *SecureEnclave) StorePayload(encoded []byte) ([]byte, error) {

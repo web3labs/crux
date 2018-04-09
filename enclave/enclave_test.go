@@ -405,9 +405,9 @@ func TestRetrieveAllFor(t *testing.T) {
 	}
 
 	// we need to wait for the replay go-routines to complete
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 	if len(mockClient.requests) != 4 {
-		t.Errorf("Only one request should have been captured, actual: %d\n",
+		t.Errorf("Four requests should have been captured, actual: %d\n",
 			len(mockClient.requests))
 	}
 }

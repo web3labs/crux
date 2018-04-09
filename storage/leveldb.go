@@ -9,7 +9,7 @@ type levelDb struct {
 	conn   *leveldb.DB
 }
 
-func Init(dbPath string) (*levelDb, error) {
+func InitLevelDb(dbPath string) (*levelDb, error) {
 	db := new(levelDb)
 	db.dbPath = dbPath
 	var err error
@@ -42,4 +42,8 @@ func (db *levelDb) ReadAll(f func(key, value *[]byte)) error {
 
 func (db *levelDb) Delete(key *[]byte) error {
 	return db.conn.Delete(*key, nil)
+}
+
+func (db *levelDb) Close() error {
+	return db.conn.Close()
 }

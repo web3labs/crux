@@ -5,4 +5,5 @@ type DataStore interface {
 	Read(key *[]byte) (*[]byte, error)
 	ReadAll(f func(key, value *[]byte)) error
 	Delete(key *[]byte) error
+	Close() error
 }

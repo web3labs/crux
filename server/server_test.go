@@ -51,15 +51,24 @@ func (s* MockEnclave) GetEncodedPartyInfo() []byte {
 }
 
 func TestUpcheck(t *testing.T) {
-	req, err := http.NewRequest("GET", upCheck, nil)
+	tm := TransactionManager{}
+	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
+}
+
+func TestVersion(t *testing.T) {
+	tm := TransactionManager{}
+	runSimpleGetRequest(t, version, apiVersion, tm.version)
+}
+
+func runSimpleGetRequest(t *testing.T, url, response string, handlerFunc http.HandlerFunc) {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	rr := httptest.NewRecorder()
-	tm := TransactionManager{}
 
-	handler := http.HandlerFunc(tm.upcheck)
+	handler := http.HandlerFunc(handlerFunc)
 	handler.ServeHTTP(rr, req)
 
 	if status := rr.Code; status != http.StatusOK {
@@ -67,7 +76,7 @@ func TestUpcheck(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	if rr.Body.String() != upCheckResponse {
+	if rr.Body.String() != response {
 		t.Errorf("handler returned unexpected body: got %v want %v\n",
 			rr.Body.String(), upCheckResponse)
 	}

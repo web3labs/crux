@@ -1,16 +1,16 @@
 package main
 
 import (
-	"log"
 	"os"
 	"path"
+	"net/http"
 	"strings"
 	"gitlab.com/blk-io/crux/api"
 	"gitlab.com/blk-io/crux/config"
 	"gitlab.com/blk-io/crux/enclave"
 	"gitlab.com/blk-io/crux/server"
 	"gitlab.com/blk-io/crux/storage"
-	"net/http"
+	log "github.com/sirupsen/logrus"
 )
 
 func main() {
@@ -33,6 +33,21 @@ func main() {
 	}
 	config.ParseCommandLine()
 
+	verbosity := config.GetInt(config.Verbosity)
+	var level log.Level
+
+	switch verbosity {
+	case 0:
+		level = log.FatalLevel
+	case 1:
+		level = log.WarnLevel
+	case 2:
+		level = log.InfoLevel
+	case 3:
+		level = log.DebugLevel
+	}
+	log.SetLevel(level)
+
 	keyFile := config.GetString(config.GenerateKeys)
 	if keyFile != "" {
 		err := enclave.DoKeyGeneration(keyFile)
@@ -47,10 +62,11 @@ func main() {
 	dbStorage := config.GetString(config.Storage)
 	storagePath := path.Join(workDir, dbStorage)
 
-	db, err := storage.Init(storagePath)
+	db, err := storage.InitLevelDb(storagePath)
 	if err != nil {
 		log.Fatalf("Unable to initialise storage, error: %v\n", err)
 	}
+	defer db.Close()
 
 	otherNodes := config.GetStringSlice(config.OtherNodes)
 	url := config.GetString(config.Url)

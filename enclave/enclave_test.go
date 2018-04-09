@@ -36,7 +36,7 @@ func initEnclave(
 	pi api.PartyInfo,
 	client utils.HttpClient) *SecureEnclave {
 
-	db, err := storage.Init(dbPath)
+	db, err := storage.InitLevelDb(dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	}
 
 	// Then we simulate the propagation and retrieval by the client
-	db, err := storage.Init(dbPath + "2")
+	db, err := storage.InitLevelDb(dbPath + "2")
 	if err != nil {
 		t.Fatal(err)
 	}

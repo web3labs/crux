@@ -86,6 +86,7 @@ func (s *PartyInfo) GetPartyInfo() {
 		}
 		req.Header.Set("Content-Type", "application/octet-stream")
 
+		log.Debugf("%s %s %s\n", req.RemoteAddr, req.Method, req.URL)
 		resp, err := s.client.Do(req)
 		if err != nil {
 			log.WithField("url", url).Errorf(
@@ -95,6 +96,7 @@ func (s *PartyInfo) GetPartyInfo() {
 
 		var encoded []byte
 		encoded, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
 		if err != nil {
 			log.WithField("url", url).Errorf(
 				"Unable to read partInfo response from host, %v", err)

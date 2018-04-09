@@ -4,12 +4,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"io/ioutil"
 	"strconv"
 	"gitlab.com/blk-io/crux/api"
 	"gitlab.com/blk-io/crux/utils"
+	log "github.com/sirupsen/logrus"
 )
 
 type Enclave interface {
@@ -28,7 +28,9 @@ type TransactionManager struct {
 }
 
 const upCheckResponse = "I'm up!"
+const apiVersion = "0.3.2"
 
+const version = "/version"
 const upCheck = "/upcheck"
 const push = "/push"
 const resend = "/resend"
@@ -43,6 +45,13 @@ const hFrom = "c11n-from"
 const hTo = "c11n-to"
 const hKey = "c11n-key"
 
+func requestLogger(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Debugf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		handler.ServeHTTP(w, r)
+	})
+}
+
 func Init(enc Enclave, port int) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 
@@ -52,7 +61,7 @@ func Init(enc Enclave, port int) (TransactionManager, error) {
 	httpServer.HandleFunc(resend, tm.resend)
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
-	go log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), httpServer))
+	go log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), requestLogger(httpServer)))
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
@@ -63,12 +72,16 @@ func Init(enc Enclave, port int) (TransactionManager, error) {
 	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket("")
-	go log.Fatal(http.Serve(ipc, ipcServer))
+	go log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
 	return tm, err
 }
 
 func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprint(w, upCheckResponse)
+}
+
+func (s *TransactionManager) version(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprint(w, apiVersion)
 }
 
 func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
@@ -90,6 +103,7 @@ func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 	key, err = s.processSend(w, req, sendReq.From, sendReq.To, &payload)
 
 	if err != nil {
+		log.Error(err)
 		badRequest(w,
 			fmt.Sprintf("Unable to store key: %s, with payload: %s, error: %s\n",
 				key, payload, err))
@@ -335,11 +349,13 @@ func decodeError(w http.ResponseWriter, req *http.Request, name string, value st
 }
 
 func badRequest(w http.ResponseWriter, message string) {
+	log.Error(message)
 	w.WriteHeader(http.StatusBadRequest)
 	fmt.Fprintf(w, message)
 }
 
 func internalServerError(w http.ResponseWriter, message string) {
+	log.Error(message)
 	w.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(w, message)
 }

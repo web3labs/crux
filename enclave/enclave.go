@@ -357,7 +357,9 @@ func (s *SecureEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
 					RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
 					RecipientNonce: epl.RecipientNonce,
 				}
-				go s.publishPayload(recipientEpl, *reqRecipient)
+				func() {
+					go s.publishPayload(recipientEpl, *reqRecipient)
+				}()
 			}
 		}
 	})

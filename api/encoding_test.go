@@ -93,11 +93,15 @@ func TestEncodePartyInfo(t *testing.T) {
 		},
 	}
 
+	runEncodePartyInfoTest(t, pi)
+}
+
+func runEncodePartyInfoTest(t *testing.T, pi PartyInfo) {
 	encoded := EncodePartyInfo(pi)
 	decoded, err := DecodePartyInfo(encoded)
 
 	if err != nil {
-		t.Fatalf("Unable to decode party info")
+		t.Fatalf("Unable to decode party info: %v", err)
 	}
 
 	if !reflect.DeepEqual(pi, decoded) {

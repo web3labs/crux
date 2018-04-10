@@ -47,7 +47,7 @@ const hKey = "c11n-key"
 
 func requestLogger(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Debugf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
+		log.Debugf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
 		handler.ServeHTTP(w, r)
 	})
 }
@@ -61,7 +61,11 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	httpServer.HandleFunc(resend, tm.resend)
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
-	go log.Fatal(http.ListenAndServe("localhost:" + strconv.Itoa(port), requestLogger(httpServer)))
+	serverUrl := "localhost:" + strconv.Itoa(port)
+	go func() {
+		log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
+	}()
+	log.Infof("HTTP server is running at: %s", serverUrl)
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
@@ -72,7 +76,10 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket(ipcPath)
-	go log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
+	go func() {
+		log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
+	}()
+	log.Infof("IPC server is running at: %s", ipcPath)
 	return tm, err
 }
 

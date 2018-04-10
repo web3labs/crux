@@ -73,7 +73,7 @@ func main() {
 	}
 
 	if err != nil {
-		log.Fatalf("Unable to initialise storage, error: %v\n", err)
+		log.Fatalf("Unable to initialise storage, error: %v", err)
 	}
 	defer db.Close()
 
@@ -106,6 +106,8 @@ func main() {
 
 	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
 
+	pi.RegisterPublicKeys(enc.PubKeys)
+
 	port := config.GetInt(config.Port)
 	if port < 0 {
 		log.Fatalln("Port must be specified")
@@ -117,6 +119,8 @@ func main() {
 	}
 
 	pi.PollPartyInfo()
+
+	select {}
 }
 
 func exit() {

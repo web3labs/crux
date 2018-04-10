@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/kevinburke/nacl"
 	"gitlab.com/blk-io/crux/utils"
+	"encoding/hex"
 )
 
 type EncryptedPayload struct {
@@ -67,6 +68,11 @@ func CreatePartyInfo(
 	}
 }
 
+func (s *PartyInfo) RegisterPublicKeys(pubKeys []nacl.Key) {
+	for _, pubKey := range pubKeys {
+		s.recipients[*pubKey] = s.url
+	}
+}
 
 func (s *PartyInfo) GetPartyInfo() {
 	encodedPartyInfo := EncodePartyInfo(*s)
@@ -78,20 +84,26 @@ func (s *PartyInfo) GetPartyInfo() {
 	}
 
 	for url := range urls {
-		req, err := http.NewRequest("POST", url + "/partyinfo", bytes.NewReader(encodedPartyInfo))
+		if url == s.url {
+			continue
+		}
+
+		req, err := http.NewRequest("POST", url + "/partyinfo",
+			bytes.NewBuffer(encodedPartyInfo[:]))
+
 		if err != nil {
 			log.WithField("url", url).Errorf(
-				"Error sending /partyinfo request, %v", err)
+				"Error creating /partyinfo request, %v", err)
 			break
 		}
 		req.Header.Set("Content-Type", "application/octet-stream")
 
-		log.Debugf("%s %s %s\n", req.RemoteAddr, req.Method, req.URL)
+		log.Debugf("%s %s %s", req.RemoteAddr, req.Method, req.URL)
 		resp, err := s.client.Do(req)
 		if err != nil {
 			log.WithField("url", url).Errorf(
 				"Error sending /partyinfo request, %v", err)
-			break
+			continue
 		}
 
 		var encoded []byte
@@ -129,6 +141,7 @@ func (s *PartyInfo) PollPartyInfo() {
 // by a response from us hitting another nodes /partyinfo endpoint
 // TODO: Control access via a channel for updates
 func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
+	log.Debugf("Updating party info payload: %s", hex.EncodeToString(encoded))
 	pi, err := DecodePartyInfo(encoded)
 
 	if err != nil {
@@ -148,9 +161,7 @@ func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 
 	for url := range pi.parties {
 		// we don't want to broadcast party info to ourselves
-		if url != s.url {
-			s.parties[url] = true
-		}
+		s.parties[url] = true
 	}
 }
 

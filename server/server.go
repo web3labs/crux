@@ -52,7 +52,7 @@ func requestLogger(handler http.Handler) http.Handler {
 	})
 }
 
-func Init(enc Enclave, port int) (TransactionManager, error) {
+func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 
 	httpServer := http.NewServeMux()
@@ -71,7 +71,7 @@ func Init(enc Enclave, port int) (TransactionManager, error) {
 	ipcServer.HandleFunc(receiveRaw, tm.receiveRaw)
 	ipcServer.HandleFunc(delete, tm.delete)
 
-	ipc, err := utils.CreateIpcSocket("")
+	ipc, err := utils.CreateIpcSocket(ipcPath)
 	go log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
 	return tm, err
 }

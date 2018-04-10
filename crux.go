@@ -60,7 +60,9 @@ func main() {
 
 	workDir := config.GetString(config.WorkDir)
 	dbStorage := config.GetString(config.Storage)
+	ipcFile := config.GetString(config.Socket)
 	storagePath := path.Join(workDir, dbStorage)
+	ipcPath := path.Join(workDir, ipcFile)
 
 	var db storage.DataStore
 	var err error
@@ -101,7 +103,7 @@ func main() {
 		log.Fatalln("Port must be specified")
 	}
 
-	_, err = server.Init(enc, port)
+	_, err = server.Init(enc, port, ipcPath)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}

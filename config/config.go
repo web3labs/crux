@@ -22,6 +22,8 @@ const (
 
 	GenerateKeys = "generate-keys"
 
+	BerkeleyDb = "berkeleydb"
+
 	Tls = "tls"
 	TlsServerChain = "tlsserverchain"
 	TlsServerTrust = "tlsservertrust"
@@ -45,6 +47,7 @@ func InitFlags() {
 	flag.String(PublicKeys, "", "Public keys hosted by this node")
 	flag.String(PrivateKeys, "", "Private keys hosted by this node")
 	flag.String(Storage, "crux.db", "Database storage file name")
+	flag.Bool(BerkeleyDb, false, "Use Berkeley DB for storage")
 
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
@@ -74,6 +77,10 @@ func LoadConfig(configPath string) error {
 
 func AllSettings() map[string]interface{} {
 	return viper.AllSettings()
+}
+
+func GetBool(key string) bool {
+	return viper.GetBool(key)
 }
 
 func GetInt(key string) int {

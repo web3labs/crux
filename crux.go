@@ -96,6 +96,14 @@ func main() {
 		log.Fatalln("Node key files must be provided")
 	}
 
+	for i, keyFile := range privKeyFiles {
+		privKeyFiles[i] = path.Join(workDir, keyFile)
+	}
+
+	for i, keyFile := range pubKeyFiles {
+		pubKeyFiles[i] = path.Join(workDir, keyFile)
+	}
+
 	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
 
 	port := config.GetInt(config.Port)

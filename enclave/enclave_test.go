@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"sync"
 	"testing"
 	"time"
 	"gitlab.com/blk-io/crux/storage"
@@ -17,6 +18,7 @@ import (
 var message = []byte("Test message")
 
 type MockClient struct {
+	serviceMu sync.Mutex
 	requests [][]byte
 }
 
@@ -25,9 +27,19 @@ func (c *MockClient) Do(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	c.serviceMu.Lock()
 	c.requests = append(c.requests, body)
+	c.serviceMu.Unlock()
+
 	respBody := ioutil.NopCloser(bytes.NewReader([]byte("")))
 	return &http.Response{Body: respBody}, nil
+}
+
+func (c *MockClient) reqCount() int {
+	c.serviceMu.Lock()
+	defer c.serviceMu.Unlock()
+	return len(c.requests)
 }
 
 func initEnclave(
@@ -105,7 +117,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 	}
 
 	// We verify payload propagation too
-	if len(mockClient.requests) != 1 {
+	if mockClient.reqCount() != 1 {
 		t.Errorf("Only one request should have been captured, actual: %d\n",
 			len(mockClient.requests))
 	}
@@ -405,8 +417,8 @@ func TestRetrieveAllFor(t *testing.T) {
 	}
 
 	// we need to wait for the replay go-routines to complete
-	time.Sleep(500 * time.Millisecond)
-	if len(mockClient.requests) != 4 {
+	time.Sleep(1 * time.Millisecond)
+	if mockClient.reqCount() != 4 {
 		t.Errorf("Four requests should have been captured, actual: %d\n",
 			len(mockClient.requests))
 	}

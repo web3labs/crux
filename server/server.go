@@ -57,6 +57,7 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
+	httpServer.HandleFunc(version, tm.version)
 	httpServer.HandleFunc(push, tm.push)
 	httpServer.HandleFunc(resend, tm.resend)
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
@@ -69,6 +70,8 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
+	ipcServer.HandleFunc(upCheck, tm.upcheck)
+	ipcServer.HandleFunc(version, tm.version)
 	ipcServer.HandleFunc(send, tm.send)
 	ipcServer.HandleFunc(sendRaw, tm.sendRaw)
 	ipcServer.HandleFunc(receive, tm.receive)

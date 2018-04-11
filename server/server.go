@@ -19,6 +19,7 @@ type Enclave interface {
 	Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error)
 	StorePayload(encoded []byte) ([]byte, error)
 	Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error)
+	RetrieveDefault(digestHash *[]byte) ([]byte, error)
 	RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error)
 	RetrieveAllFor(reqRecipient *[]byte) error
 	Delete(digestHash *[]byte) error
@@ -163,8 +164,12 @@ func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	encodedKey := base64.StdEncoding.EncodeToString(key)
-	fmt.Fprint(w, encodedKey)
+	// Uncomment the below for Quorum v2.0.2 onwards
+	// see https://github.com/jpmorganchase/quorum/commit/ee498061b5a74bf1f3290139a53840345fa038cb#diff-63fbbd6b2c0487b8cd4445e881822cdd
+	// encodedKey := base64.StdEncoding.EncodeToString(key)
+	// fmt.Fprint(w, encodedKey)
+	// Then delete this line
+	w.Write(key)
 }
 
 func (s *TransactionManager) processSend(
@@ -250,12 +255,17 @@ func (s *TransactionManager) processReceive(
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode key: %s", b64Key)
 	}
-	to, err := base64.StdEncoding.DecodeString(b64To)
-	if err != nil {
-		return nil, fmt.Errorf("unable to decode to: %s", b64Key)
-	}
 
-	return s.Enclave.Retrieve(&key, &to)
+	if b64To != "" {
+		to, err := base64.StdEncoding.DecodeString(b64To)
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode to: %s", b64Key)
+		}
+
+		return s.Enclave.Retrieve(&key, &to)
+	} else {
+		return s.Enclave.RetrieveDefault(&key)
+	}
 }
 
 func (s *TransactionManager) delete(w http.ResponseWriter, req *http.Request) {

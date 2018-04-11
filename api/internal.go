@@ -11,6 +11,7 @@ import (
 	"gitlab.com/blk-io/crux/utils"
 	"encoding/hex"
 	"net/http/httputil"
+	"fmt"
 )
 
 type EncryptedPayload struct {
@@ -113,6 +114,12 @@ func (s *PartyInfo) GetPartyInfo() {
 				"Error sending /partyinfo request, %v", err)
 			continue
 		}
+		
+		if resp.StatusCode != http.StatusOK {
+			log.WithField("url", rawUrl).Errorf(
+				"Error sending /partyinfo request, non-200 status code: %v", resp)
+			continue
+		}
 
 		var encoded []byte
 		encoded, err = ioutil.ReadAll(resp.Body)
@@ -191,6 +198,10 @@ func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("non-200 status code received: %v", resp)
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)

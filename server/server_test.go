@@ -32,6 +32,10 @@ func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
 }
 
+func (s* MockEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
+	return *digestHash, nil
+}
+
 func (s* MockEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
 	return digestHash, nil
 }
@@ -115,7 +119,9 @@ func TestSendRaw(t *testing.T) {
 	headers[hFrom] = []string{sender}
 	headers[hTo] = []string{receiver}
 
-	runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
+	// Uncomment the below for Quorum v2.0.2 onwards
+	//runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
+	runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
 }
 
 func TestReceive(t *testing.T) {

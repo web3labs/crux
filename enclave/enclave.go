@@ -278,6 +278,12 @@ func sealPayload(
 		sharedKey)
 }
 
+func (s *SecureEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
+	// to address is either default or specified on communication
+	key := (*s.PubKeys[0])[:]
+	return s.Retrieve(digestHash, &key)
+}
+
 func (s *SecureEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 
 	encoded, err := s.Db.Read(digestHash)

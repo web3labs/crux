@@ -33,14 +33,14 @@ func (s *PartyInfo) GetRecipient(key nacl.Key) (string, bool) {
 	return value, ok
 }
 
-func InitPartyInfo(url string, otherNodes []string, client utils.HttpClient) PartyInfo {
+func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient) PartyInfo {
 	parties := make(map[string]bool)
 	for _, node := range otherNodes {
 		parties[node] = true
 	}
 
 	return PartyInfo{
-		url:        url,
+		url:        rawUrl,
 		recipients: make(map[[nacl.KeySize]byte]string),
 		parties:    parties,
 		client:     client,
@@ -83,16 +83,23 @@ func (s *PartyInfo) GetPartyInfo() {
 		urls[k] = v
 	}
 
-	for url := range urls {
-		if url == s.url {
+	for rawUrl := range urls {
+		if rawUrl == s.url {
 			continue
 		}
 
-		req, err := http.NewRequest("POST", url + "/partyinfo",
-			bytes.NewBuffer(encodedPartyInfo[:]))
+		endPoint, err := utils.BuildUrl(rawUrl, "/partyinfo")
 
 		if err != nil {
-			log.WithField("url", url).Errorf(
+			log.WithFields(log.Fields{"rawUrl": rawUrl, "endPoint": "/partyinfo"}).Errorf(
+				"Invalid endpoint provided")
+		}
+
+		var req *http.Request
+		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encodedPartyInfo[:]))
+
+		if err != nil {
+			log.WithField("url", rawUrl).Errorf(
 				"Error creating /partyinfo request, %v", err)
 			break
 		}
@@ -101,7 +108,7 @@ func (s *PartyInfo) GetPartyInfo() {
 		log.Debugf("%s %s %s", req.RemoteAddr, req.Method, req.URL)
 		resp, err := s.client.Do(req)
 		if err != nil {
-			log.WithField("url", url).Errorf(
+			log.WithField("url", rawUrl).Errorf(
 				"Error sending /partyinfo request, %v", err)
 			continue
 		}
@@ -110,8 +117,8 @@ func (s *PartyInfo) GetPartyInfo() {
 		encoded, err = ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil {
-			log.WithField("url", url).Errorf(
-				"Unable to read partInfo response from host, %v", err)
+			log.WithField("url", rawUrl).Errorf(
+				"Unable to read partyInfo response from host, %v", err)
 			break
 		}
 		s.UpdatePartyInfo(encoded)
@@ -167,7 +174,13 @@ func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 
 func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 
-	req, err := http.NewRequest("POST", url + "/push", bytes.NewReader(encoded))
+	endPoint, err := utils.BuildUrl(url, "/push")
+	if err != nil {
+		return "", err
+	}
+
+	var req *http.Request
+	req, err = http.NewRequest("POST", endPoint, bytes.NewReader(encoded))
 	if err != nil {
 		return "", err
 	}

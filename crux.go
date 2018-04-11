@@ -11,6 +11,7 @@ import (
 	"gitlab.com/blk-io/crux/server"
 	"gitlab.com/blk-io/crux/storage"
 	log "github.com/sirupsen/logrus"
+	"time"
 )
 
 func main() {
@@ -83,7 +84,10 @@ func main() {
 		log.Fatalln("URL must be specified")
 	}
 
-	pi := api.InitPartyInfo(url, otherNodes, http.DefaultClient)
+	httpClient := &http.Client{
+		Timeout: time.Second * 10,
+	}
+	pi := api.InitPartyInfo(url, otherNodes, httpClient)
 
 	privKeyFiles := config.GetStringSlice(config.PrivateKeys)
 	pubKeyFiles := config.GetStringSlice(config.PublicKeys)

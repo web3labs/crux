@@ -3,7 +3,7 @@ package storage
 import (
 	"encoding/base64"
 	"github.com/jsimonetti/berkeleydb"
-	"gitlab.com/blk-io/crux/utils"
+	"github.com/blk-io/crux/utils"
 )
 
 type berkleyDb struct {

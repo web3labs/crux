@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"gitlab.com/blk-io/crux/storage"
-	"gitlab.com/blk-io/crux/api"
-	"gitlab.com/blk-io/crux/utils"
+	"github.com/blk-io/crux/storage"
+	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/utils"
 	"github.com/kevinburke/nacl"
 )
 

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 	"github.com/kevinburke/nacl"
-	"gitlab.com/blk-io/crux/utils"
+	"github.com/blk-io/crux/utils"
 )
 
 func TestEncodePayload(t *testing.T) {

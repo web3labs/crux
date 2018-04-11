@@ -8,7 +8,7 @@ import (
 	"time"
 	log "github.com/sirupsen/logrus"
 	"github.com/kevinburke/nacl"
-	"gitlab.com/blk-io/crux/utils"
+	"github.com/blk-io/crux/utils"
 	"encoding/hex"
 	"net/http/httputil"
 	"fmt"

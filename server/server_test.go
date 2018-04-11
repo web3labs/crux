@@ -4,7 +4,7 @@ import (
 	"testing"
 	"net/http"
 	"net/http/httptest"
-	"gitlab.com/blk-io/crux/api"
+	"github.com/blk-io/crux/api"
 	"encoding/json"
 	"encoding/base64"
 	"bytes"

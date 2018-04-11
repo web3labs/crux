@@ -1,7 +1,7 @@
 image: golang:latest
 
 variables:
-  REPO_NAME: gitlab.com/blk-io/crux
+  REPO_NAME: github.com/blk-io/crux
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain

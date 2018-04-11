@@ -12,6 +12,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"encoding/hex"
 	"net/textproto"
+	"net/http/httputil"
 )
 
 type Enclave interface {
@@ -40,7 +41,7 @@ const partyInfo = "/partyinfo"
 const send = "/send"
 const sendRaw = "/sendraw"
 const receive = "/receive"
-const receiveRaw = "receiveraw"
+const receiveRaw = "/receiveraw"
 const delete = "/delete"
 
 const hFrom = "c11n-from"
@@ -49,7 +50,16 @@ const hKey = "c11n-key"
 
 func requestLogger(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Debugf("%s %s %s", r.RemoteAddr, r.Method, r.URL)
+		if log.GetLevel() == log.DebugLevel {
+			dump, err := httputil.DumpRequest(r, true)
+			if err != nil {
+				http.Error(w, fmt.Sprint(err), http.StatusInternalServerError)
+				return
+			}
+
+			log.Debugf("%q", dump)
+		}
+
 		handler.ServeHTTP(w, r)
 	})
 }

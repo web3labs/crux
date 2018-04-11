@@ -184,7 +184,7 @@ func (s *SecureEnclave) store(
 			}
 
 			log.WithFields(log.Fields{
-				"recipient": hex.EncodeToString(recipient),"digest": digest,
+				"recipient": hex.EncodeToString(recipient),"digest": hex.EncodeToString(digest),
 			}).Debug("Publishing payload")
 
 			s.publishPayload(recipientEpl, recipient)

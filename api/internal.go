@@ -10,6 +10,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"gitlab.com/blk-io/crux/utils"
 	"encoding/hex"
+	"net/http/httputil"
 )
 
 type EncryptedPayload struct {
@@ -105,7 +106,7 @@ func (s *PartyInfo) GetPartyInfo() {
 		}
 		req.Header.Set("Content-Type", "application/octet-stream")
 
-		log.Debugf("%s %s %s", req.RemoteAddr, req.Method, req.URL)
+		logRequest(req)
 		resp, err := s.client.Do(req)
 		if err != nil {
 			log.WithField("url", rawUrl).Errorf(
@@ -186,7 +187,7 @@ func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 
-	log.Debugf("%s %s %s", req.RemoteAddr, req.Method, req.URL)
+	logRequest(req)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -200,4 +201,15 @@ func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 	}
 
 	return string(body), nil
+}
+
+func logRequest(r *http.Request) {
+	if log.GetLevel() == log.DebugLevel {
+		dump, err := httputil.DumpRequestOut(r, true)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		log.Debugf("%q", dump)
+	}
 }

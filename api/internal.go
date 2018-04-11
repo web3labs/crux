@@ -186,6 +186,7 @@ func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
 
+	log.Debugf("%s %s %s", req.RemoteAddr, req.Method, req.URL)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

@@ -183,6 +183,10 @@ func (s *SecureEnclave) store(
 				RecipientNonce: epl.RecipientNonce,
 			}
 
+			log.WithFields(log.Fields{
+				"recipient": hex.EncodeToString(recipient),"digest": digest,
+			}).Debug("Publishing payload")
+
 			s.publishPayload(recipientEpl, recipient)
 		}
 	}

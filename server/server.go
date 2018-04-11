@@ -176,13 +176,13 @@ func (s *TransactionManager) processSend(
 	}
 
 	recipients := make([][]byte, len(b64recipients))
-	for _, value := range b64recipients {
+	for i, value := range b64recipients {
 		recipient, err := base64.StdEncoding.DecodeString(value)
 		if err != nil {
 			decodeError(w, req, "recipient", value, err)
 			return nil, err
 		} else {
-			recipients = append(recipients, recipient)
+			recipients[i] = recipient
 		}
 	}
 

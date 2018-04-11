@@ -150,8 +150,12 @@ func (s *SecureEnclave) store(
 		epl.RecipientBoxes[i] = sealedBox
 	}
 
+	var toSelf bool
 	if len(recipients) == 0 {
+		toSelf = true
 		recipients = [][]byte{(*s.selfPubKey)[:]}
+	} else {
+		toSelf = false
 	}
 
 	// store locally
@@ -169,16 +173,18 @@ func (s *SecureEnclave) store(
 	encodedEpl := api.EncodePayloadWithRecipients(epl, recipients)
 	digest, err := s.storePayload(epl, encodedEpl)
 
-	for i, recipient := range recipients {
-		recipientEpl := api.EncryptedPayload{
-			Sender:         senderPubKey,
-			CipherText:     epl.CipherText,
-			Nonce:          epl.Nonce,
-			RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
-			RecipientNonce: epl.RecipientNonce,
-		}
+	if !toSelf {
+		for i, recipient := range recipients {
+			recipientEpl := api.EncryptedPayload{
+				Sender:         senderPubKey,
+				CipherText:     epl.CipherText,
+				Nonce:          epl.Nonce,
+				RecipientBoxes: [][]byte{epl.RecipientBoxes[i]},
+				RecipientNonce: epl.RecipientNonce,
+			}
 
-		s.publishPayload(recipientEpl, recipient)
+			s.publishPayload(recipientEpl, recipient)
+		}
 	}
 
 	return digest, err

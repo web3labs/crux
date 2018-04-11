@@ -247,7 +247,7 @@ func runRawHandlerTest(
 	}
 
 	for k, v := range headers {
-		req.Header[k] = v
+		req.Header.Set(k, v[0])
 	}
 
 	rr := httptest.NewRecorder()

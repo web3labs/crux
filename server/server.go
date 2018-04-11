@@ -10,6 +10,8 @@ import (
 	"gitlab.com/blk-io/crux/api"
 	"gitlab.com/blk-io/crux/utils"
 	log "github.com/sirupsen/logrus"
+	"encoding/hex"
+	"net/textproto"
 )
 
 type Enclave interface {
@@ -127,22 +129,14 @@ func (s *TransactionManager) send(w http.ResponseWriter, req *http.Request) {
 
 func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 
-	var from string
-	hFrom, ok := req.Header[hFrom]
-	if !ok {
-		from = ""
-	}
+	from := req.Header.Get(hFrom)
 
-	if len(hFrom) == 1 {
-		from = hFrom[0]
-	} else {
-		from = ""
-	}
-
-	var to []string
-	to, ok = req.Header[hTo]
+	to, ok := req.Header[hTo]
 	if !ok {
-		to = []string{}
+		to, ok = req.Header[textproto.CanonicalMIMEHeaderKey(hTo)]
+		if !ok {
+			to = []string{}
+		}
 	}
 
 	payload, err := ioutil.ReadAll(req.Body)
@@ -168,6 +162,13 @@ func (s *TransactionManager) processSend(
 	b64from string,
 	b64recipients []string,
 	payload *[]byte) ([]byte, error) {
+
+	log.WithFields(log.Fields{
+		"b64From" : b64from,
+		"b64Recipients": b64recipients,
+		"payload": hex.EncodeToString(*payload),}).Debugf(
+		"Processing send request")
+
 	sender, err := base64.StdEncoding.DecodeString(b64from)
 	if err != nil {
 		decodeError(w, req, "sender", b64from, err)
@@ -214,27 +215,13 @@ func (s *TransactionManager) receive(w http.ResponseWriter, req *http.Request) {
 
 func (s *TransactionManager) receiveRaw(w http.ResponseWriter, req *http.Request) {
 
-	keyHeader, ok := req.Header[hKey]
-	if !ok {
+	key := req.Header.Get(hKey)
+	if key == "" {
 		badRequest(w, "key not specified")
 		return
 	}
 
-	if len(keyHeader) != 1 {
-		badRequest(w, "Only a single key should be provided")
-		return
-	}
-	key := keyHeader[0]
-
-	var toHeader []string
-	toHeader, ok = req.Header[hTo]
-
-	var to string
-	if !ok || len(toHeader) != 1 {
-		to = ""
-	} else {
-		to = toHeader[0]
-	}
+	to := req.Header.Get(hTo)
 
 	payload, err := s.processReceive(w, req, key, to)
 

@@ -9,9 +9,9 @@ secure enclave component of [Quorum](https://github.com/jpmorganchase/quorum/), 
 
 ## Getting started
 
-The best way to start is to run the 
-[7 Nodes Quorum example](https://github.com/blk-io/quorum-examples) that uses Crux. This is a fork 
-of the JP Morgan version.
+The best way to start is to run the Crux 
+[7 Nodes Quorum example](https://github.com/blk-io/quorum-examples). This is a fork of the JP 
+Morgan version.
 
 If you you'd prefer to run just a client, you can build using the below instructions and run as per 
 the below.

@@ -68,6 +68,16 @@ crux --url=http://127.0.0.1:9001/ --port=9001 --workdir=crux --publickeys=tm.pub
 At present, Crux performs its cryptographic operations in a manner identical to Constellation. You 
 can read the specifics [here](https://github.com/jpmorganchase/constellation/#how-it-works). 
 
+The two main workflows for handling private transactions are as follows.
+
+Submission of a new transaction:
+
+![New Transaction Sequence](./docs/new-tx.svg)
+
+Retrieval of an existing transaction:
+
+![Read Transaction Sequence](./docs/read-tx.svg)
+
 ## Why Crux?
 
 *Crux is a constellation located in the southern sky in a bright portion of the Milky Way. It is 

@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant Client
+    participant Quorum
+    participant Crux
+
+Client->>Quorum: getQuorumPayload(transactionHash, to)
+Quorum->>Crux: receive(transactionHash, to)
+Crux-->>Quorum: receiveResponse(transaction)
+Quorum->>Client: transaction

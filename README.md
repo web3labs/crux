@@ -68,13 +68,14 @@ crux --url=http://127.0.0.1:9001/ --port=9001 --workdir=crux --publickeys=tm.pub
 At present, Crux performs its cryptographic operations in a manner identical to Constellation. You 
 can read the specifics [here](https://github.com/jpmorganchase/constellation/#how-it-works). 
 
-The two main workflows for handling private transactions are as follows.
+The two main workflows for handling private transactions are the submission and retrieval 
+demonstrated below.
 
-Submission of a new transaction:
+### New transaction submission
 
 ![New Transaction Sequence](./docs/new-tx.svg)
 
-Retrieval of an existing transaction:
+### Existing transaction retrieval
 
 ![Read Transaction Sequence](./docs/read-tx.svg)
 

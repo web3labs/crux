@@ -1,3 +1,4 @@
+// Package server contains the core server components.
 package server
 
 import (
@@ -15,6 +16,7 @@ import (
 	"net/http/httputil"
 )
 
+// Enclave is the interface used by the transaction enclaves.
 type Enclave interface {
 	Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error)
 	StorePayload(encoded []byte) ([]byte, error)
@@ -27,6 +29,7 @@ type Enclave interface {
 	GetEncodedPartyInfo() []byte
 }
 
+// TransactionManager is responsible for handling all transaction requests.
 type TransactionManager struct {
 	Enclave Enclave
 }
@@ -65,6 +68,7 @@ func requestLogger(handler http.Handler) http.Handler {
 	})
 }
 
+// Init initializes a new TransactionManager instance.
 func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 

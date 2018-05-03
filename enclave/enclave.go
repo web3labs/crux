@@ -1,3 +1,4 @@
+// Package enclave provides enclaves for the secure storage and propagation of transactions.
 package enclave
 
 import (
@@ -20,28 +21,32 @@ import (
 	"github.com/blk-io/crux/utils"
 )
 
+// SecureEnclave is the secure transaction enclave.
 type SecureEnclave struct {
-	Db         storage.DataStore
-	PubKeys    []nacl.Key
-	PrivKeys   []nacl.Key
-	selfPubKey nacl.Key
-	PartyInfo  api.PartyInfo
-	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // maps sender -> recipient -> shared key
-	client     utils.HttpClient
+	Db         storage.DataStore  // The underlying key-value datastore for encrypted transactions
+	PubKeys    []nacl.Key  // Public keys associated with this enclave
+	PrivKeys   []nacl.Key  // Private keys associated with this enclave
+	selfPubKey nacl.Key  // An ephemeral key used for transactions only intended for this enclave
+	PartyInfo  api.PartyInfo  // Details of all other nodes (or parties) on the network
+	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // Maps sender -> recipient -> shared key
+	client     utils.HttpClient  // The underlying HTTP client used to propagate requests
 }
 
+// Init creates a new instance of the SecureEnclave.
 func Init(
 	db storage.DataStore,
 	pubKeyFiles, privKeyFiles []string,
 	pi api.PartyInfo,
 	client utils.HttpClient) *SecureEnclave {
 
+	// Key format:
 	// BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=
 	pubKeys, err := loadPubKeys(pubKeyFiles)
 	if err != nil {
 		log.Fatalf("Unable to load public key files: %s, error: %v", pubKeyFiles, err)
 	}
 
+	// Key format:
 	// {"data":{"bytes":"Wl+xSyXVuuqzpvznOS7dOobhcn4C5auxkFRi7yLtgtA="},"type":"unlocked"}
 	privKeys, err := loadPrivKeys(privKeyFiles)
 	if err != nil {
@@ -56,6 +61,26 @@ func Init(
 		client: client,
 	}
 
+	// We use shared keys for encrypting data. The keys between a specific sender and recipient are
+	// computed once for each unique pair.
+	//
+	// Encrypt scenarios:
+	// The sender value must always be a public key that we have the corresponding private key for
+	// privateFor: [] => 	encrypt with sharedKey [self-private, selfPub-public]
+	// 		store in cache as (self-public, selfPub-public)
+	// privateFor: [recipient1, ...] => encrypt with sharedKey1 [self-private, recipient1-public], ...
+	//     store in cache as (self-public, recipient1-public)
+	// Decrypt scenarios:
+	// epl, [] => The payload was pushed to us (we are recipient1), decrypt with sharedKey
+	//     [recipient1-private, sender-public]
+	// 	   lookup in cache as (recipient1-public, sender-public)
+	// epl, [recipient1, ...,] => The payload originated with us (we are self), decrypt with
+	//     sharedKey [self-private, recipient1-public]
+	//     lookup in cache as (self-public, recipient1-public)
+	//
+	// Note that sharedKey(privA, pubB) produces the same key as sharedKey(pubA, privB), which is
+	// why when sending to ones self we encrypt with sharedKey [self-private, selfPub-public], then
+	// retrieve with sharedKey [self-private, selfPub-public]
 	enc.keyCache = make(map[nacl.Key]map[nacl.Key]nacl.Key)
 
 	enc.selfPubKey = nacl.NewKey()
@@ -71,27 +96,13 @@ func Init(
 		enc.resolveSharedKey(enc.PrivKeys[0], pubKey, enc.selfPubKey)
 	}
 
-	// We use shared keys for encrypting data. The keys between a specific sender and recipient are
-	// computed once for each unique pair.
-	//
-	// Encrypt scenarios:
-	// The sender value must always be a public key that we have the corresponding private key for
-	// privateFor: [] => 	encrypt with sharedKey [self-private, selfPub-public]
-	// 					store in cache as (self-public, selfPub-public)
-	// privateFor: [recipient1, ...] => encrypt with sharedKey1 [self-private, recipient1-public], ...
-	// 					store in cache as (self-public, recipient1-public)
-	// Decrypt scenarios:
-	// epl, [] => The payload was pushed to us (we are recipient1), decrypt with sharedKey [recipient1-private, sender-public]
-	// 					lookup in cache as (recipient1-public, sender-public)
-	// epl, [recipient1, ...,] => The payload originated with us (we are self), decrypt with sharedKey [self-private, recipient1-public]
-	// 					lookup in cache as (self-public, recipient1-public)
-	//
-	// Note that sharedKey(privA, pubB) produces the same key as sharedKey(pubA, privB), which is why
-	// when sending to ones self we encrypt with sharedKey [self-private, selfPub-public], then
-	// retrieve with sharedKey [self-private, selfPub-public]
 	return &enc
 }
 
+// Store a payload submitted via an Ethereum node.
+// This function encrypts the payload, and distributes the encrypted payload to the other
+// specified recipients in the network.
+// The hash of the encrypted payload is returned to the sender.
 func (s *SecureEnclave) Store(
 	message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
 
@@ -228,7 +239,8 @@ func (s *SecureEnclave) publishPayload(epl api.EncryptedPayload, recipient []byt
 	}
 }
 
-func (s *SecureEnclave) resolveSharedKey(senderPrivKey, senderPubKey, recipientPubKey nacl.Key) nacl.Key {
+func (s *SecureEnclave) resolveSharedKey(
+	senderPrivKey, senderPubKey, recipientPubKey nacl.Key) nacl.Key {
 
 	keyCache, ok := s.keyCache[senderPubKey]
 	if !ok {
@@ -255,6 +267,10 @@ func (s *SecureEnclave) resolvePrivateKey(publicKey nacl.Key) (nacl.Key, error) 
 		hex.EncodeToString((*publicKey)[:]))
 }
 
+// Store a binary encoded payload within this SecureEnclave.
+// This will be a payload that has been propagated to this node as it is a party on the
+// transaction. I.e. it is not the original recipient of the transaction, but one of the recipients
+// it is intended for.
 func (s *SecureEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	epl, _ := api.DecodePayloadWithRecipients(encoded)
 	return s.storePayload(epl, encoded)
@@ -278,12 +294,17 @@ func sealPayload(
 		sharedKey)
 }
 
+// RetrieveDefault is used to retrieve the provided payload. It attempts to use a default key
+// value of the first public key associated with this SecureEnclave instance.
+// If the payload cannot be found, or decrypted successfully an error is returned.
 func (s *SecureEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
 	// to address is either default or specified on communication
 	key := (*s.PubKeys[0])[:]
 	return s.Retrieve(digestHash, &key)
 }
 
+// Retrieve is used to retrieve the provided payload.
+// If the payload cannot be found, or decrypted successfully an error is returned.
 func (s *SecureEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 
 	encoded, err := s.Db.Read(digestHash)
@@ -336,6 +357,8 @@ func (s *SecureEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error)
 	return payload, nil
 }
 
+// RetrieveFor retrieves a payload with the given digestHash for a specific recipient who was one
+// of the original recipients specified on the payload.
 func (s *SecureEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
 	encoded, err := s.Db.Read(digestHash)
 	if err != nil {
@@ -360,6 +383,9 @@ func (s *SecureEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*
 	return nil, fmt.Errorf("invalid recipient %q requested for payload", reqRecipient)
 }
 
+// RetrieveAllFor retrieves all payloads that the specified recipient was an original recipient
+// for.
+// Each payload found is published to the specified recipient.
 func (s *SecureEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
 	return s.Db.ReadAll(func(key, value *[]byte) {
 		epl, recipients := api.DecodePayloadWithRecipients(*value)
@@ -381,14 +407,18 @@ func (s *SecureEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
 	})
 }
 
+// Delete deletes the payload associated with the given digestHash from the SecureEnclave's store.
 func (s *SecureEnclave) Delete(digestHash *[]byte) error {
 	return s.Db.Delete(digestHash)
 }
 
+// UpdatePartyInfo applies the provided binary encoded party details to the SecureEnclave's
+// own party details store.
 func (s *SecureEnclave) UpdatePartyInfo(encoded []byte) {
 	s.PartyInfo.UpdatePartyInfo(encoded)
 }
 
+// GetEncodedPartyInfo provides this SecureEnclaves PartyInfo details in a binary encoded format.
 func (s *SecureEnclave) GetEncodedPartyInfo() []byte {
 	return api.EncodePartyInfo(s.PartyInfo)
 }
@@ -444,6 +474,9 @@ func loadKeys(
 	return keys, nil
 }
 
+// DoKeyGeneration is used to generate new public and private key-pairs, writing them to the
+// provided file locations.
+// Public keys have the "pub" suffix, whereas private keys have the "key" suffix.
 func DoKeyGeneration(keyFile string) error {
 	pubKey, privKey, err := box.GenerateKey(rand.Reader)
 	if err != nil {

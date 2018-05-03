@@ -1,3 +1,4 @@
+// Package config provides the configuration settings to be used by the application at runtime
 package config
 
 import (
@@ -37,6 +38,7 @@ const (
 	TlsServerKey = "tlsserverkey"
 )
 
+// InitFlags initializes all supported command line flags.
 func InitFlags() {
 	flag.String(GenerateKeys, "", "Generate a new keypair")
 	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
@@ -59,17 +61,20 @@ func InitFlags() {
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 }
 
+// Usage prints usage instructions to the console.
 func Usage() {
 	fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 	fmt.Fprintf(os.Stderr, "      %-25s%s\n", "crux.config", "Optional config file")
 	pflag.PrintDefaults()
 }
 
+// ParseCommandLine parses all provided command line arguments.
 func ParseCommandLine() {
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 }
 
+// LoadConfig loads all configuration settings in the provided configPath location.
 func LoadConfig(configPath string) error {
 	viper.SetConfigType("hcl")
 	viper.SetConfigFile(configPath)

@@ -14,6 +14,8 @@ import (
 	"fmt"
 )
 
+// EncryptedPayload is the struct used for storing all data associated with an encrypted
+// transaction.
 type EncryptedPayload struct {
 	Sender         nacl.Key
 	CipherText     []byte
@@ -22,19 +24,21 @@ type EncryptedPayload struct {
 	RecipientNonce nacl.Nonce
 }
 
+// PartyInfo is a struct that stores details of all enclave nodes (or parties) on the network.
 type PartyInfo struct {
-	url string
-	// public key -> URL
-	recipients map[[nacl.KeySize]byte]string
-	parties    map[string]bool // URLs
+	url string  // URL identifying this node
+	recipients map[[nacl.KeySize]byte]string  // public key -> URL
+	parties    map[string]bool  // Node (or party) URLs
 	client     utils.HttpClient
 }
 
+// GetRecipient retrieves the URL associated with the provided recipient.
 func (s *PartyInfo) GetRecipient(key nacl.Key) (string, bool) {
 	value, ok := s.recipients[*key]
 	return value, ok
 }
 
+// InitPartyInfo initializes a new PartyInfo store.
 func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient) PartyInfo {
 	parties := make(map[string]bool)
 	for _, node := range otherNodes {
@@ -49,6 +53,7 @@ func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient) 
 	}
 }
 
+// CreatePartyInfo creates a new PartyInfo struct.
 func CreatePartyInfo(
 	url string,
 	otherNodes []string,
@@ -70,12 +75,15 @@ func CreatePartyInfo(
 	}
 }
 
+// RegisterPublicKeys associates the provided public keys with this node.
 func (s *PartyInfo) RegisterPublicKeys(pubKeys []nacl.Key) {
 	for _, pubKey := range pubKeys {
 		s.recipients[*pubKey] = s.url
 	}
 }
 
+// GetPartyInfo requests PartyInfo data from all remote nodes this node is aware of. The data
+// provided in each response is applied to this node.
 func (s *PartyInfo) GetPartyInfo() {
 	encodedPartyInfo := EncodePartyInfo(*s)
 
@@ -152,9 +160,10 @@ func (s *PartyInfo) PollPartyInfo() {
 	}()
 }
 
-// This can happen from the /partyinfo server endpoint being hit, or
-// by a response from us hitting another nodes /partyinfo endpoint
-// TODO: Control access via a channel for updates
+// UpdatePartyInfo updates the PartyInfo datastore with the provided encoded data.
+// This can happen from the /partyinfo server endpoint being hit, or by a response from us hitting
+// another nodes /partyinfo endpoint.
+// TODO: Control access via a channel for updates.
 func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 	log.Debugf("Updating party info payload: %s", hex.EncodeToString(encoded))
 	pi, err := DecodePartyInfo(encoded)
@@ -180,6 +189,7 @@ func (s *PartyInfo) UpdatePartyInfo(encoded []byte) {
 	}
 }
 
+// Push is responsible for propagating the encoded payload to the given remote node.
 func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 
 	endPoint, err := utils.BuildUrl(url, "/push")

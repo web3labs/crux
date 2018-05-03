@@ -445,7 +445,7 @@ func TestDoKeyGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = loadPrivKeys([]string{keyFiles})
+	_, err = loadPrivKeys([]string{keyFiles + ".key"})
 	if err != nil {
 		t.Fatal(err)
 	}

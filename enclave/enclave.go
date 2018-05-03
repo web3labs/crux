@@ -476,7 +476,7 @@ func DoKeyGeneration(keyFile string) error {
 		return fmt.Errorf("unable to encode private key: %v, error: %v", jsonKey, err)
 	}
 
-	err = ioutil.WriteFile(keyFile, encoded, 0600)
+	err = ioutil.WriteFile(keyFile + ".key", encoded, 0600)
 	if err != nil {
 		return fmt.Errorf("unable to write private key: %s, error: %v", keyFile, err)
 	}

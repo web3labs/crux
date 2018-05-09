@@ -10,7 +10,7 @@ variables:
 # repository in /go/src/gitlab.com/namespace/project
 # Thus, making a symbolic link corrects this.
 before_script:
-  - apt-get update -qq && apt-get install -y -qq libdb-dev pthread # This is hopefully temporary until we completely remove BerkeleyDB.
+  - apt-get update -qq && apt-get install -y -qq libdb-dev libpthread-stubs0-dev # This is hopefully temporary until we completely remove BerkeleyDB.
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME

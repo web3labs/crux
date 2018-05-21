@@ -3,7 +3,6 @@ package storage
 import (
 	"encoding/base64"
 	"github.com/jsimonetti/berkeleydb"
-	"github.com/blk-io/crux/utils"
 )
 
 type berkleyDb struct {
@@ -48,7 +47,7 @@ func (db *berkleyDb) Read(key *[]byte) (*[]byte, error) {
 	}
 
 	var decoded []byte
-	decoded, err = utils.DecodeBase64(value)
+	decoded, err = base64.StdEncoding.DecodeString(value)
 	return &decoded, err
 }
 

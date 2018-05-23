@@ -13,6 +13,7 @@ import (
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
 	"path"
+	"io/ioutil"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -186,7 +187,6 @@ func TestPush(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	tm := TransactionManager{Enclave: &MockEnclave{}}
-	//tm := testInit(t)
 
 	handler := http.HandlerFunc(tm.push)
 	handler.ServeHTTP(rr, req)
@@ -415,7 +415,11 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 }
 
 func TestInit(t *testing.T) {
-	db, err := storage.InitLevelDb("data/dir:storage")
+	dbPath, err := ioutil.TempDir("", "TestInit")
+	if err != nil {
+		t.Error(err)
+	}
+	db, err := storage.InitLevelDb(dbPath)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}
@@ -423,15 +427,14 @@ func TestInit(t *testing.T) {
 	privKeyFiles := []string{"key"}
 
 	for i, keyFile := range privKeyFiles {
-		privKeyFiles[i] = path.Join("data", keyFile)
+		privKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
 	}
 
 	for i, keyFile := range pubKeyFiles {
-		pubKeyFiles[i] = path.Join("data", keyFile)
+		pubKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
 	}
 
 	key := []nacl.Key{nacl.NewKey()}
-	expUrl := "http://localhost:9000"
 
 	pi := api.CreatePartyInfo(
 		"http://localhost:9000",
@@ -439,22 +442,15 @@ func TestInit(t *testing.T) {
 		key,
 		http.DefaultClient)
 
-	pi.GetPartyInfo()
-
 	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
-	tm, err := Init(enc, 9001, "data/crux.db")
+
+	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
+	if err != nil {
+		t.Error(err)
+	}
+	tm, err := Init(enc, 9001, ipcPath)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}
 	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
-
-	expKey := []nacl.Key{nacl.NewKey()}
-
-	pi.RegisterPublicKeys(expKey)
-	pi.PollPartyInfo()
-
-	url, ok := pi.GetRecipient(expKey[0])
-	if ok && url != expUrl{
-		t.Errorf("Url is %s whereas %s is expected", url, expUrl)
-	}
 }

@@ -1,5 +1,7 @@
 # Crux 
 
+<a href="https://quorumslack.azurewebsites.net" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://quorumslack.azurewebsites.net/badge.svg" alt="Quorum Slack" /></a>
+
 Data privacy for Quorum. 
 
 Crux is a secure enclave for Quorum written in Golang. 
@@ -78,6 +80,10 @@ demonstrated below.
 ### Existing transaction retrieval
 
 ![Read Transaction Sequence](./docs/read-tx.svg)
+
+## Logical architecture
+
+![Logical architecture](https://github.com/blk-io/crux/docs/quorum-architecture.png)
 
 ## Why Crux?
 

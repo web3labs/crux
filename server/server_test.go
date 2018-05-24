@@ -10,6 +10,10 @@ import (
 	"bytes"
 	"reflect"
 	"github.com/kevinburke/nacl"
+	"github.com/blk-io/crux/enclave"
+	"github.com/blk-io/crux/storage"
+	"path"
+	"io/ioutil"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -153,6 +157,16 @@ func TestReceivedRaw(t *testing.T) {
 	runRawHandlerTest(t, headers, payload, payload, receiveRaw, tm.receiveRaw)
 }
 
+func TestNilKeyReceivedRaw(t *testing.T) {
+	tm := TransactionManager{Enclave: &MockEnclave{}}
+
+	headers := make(http.Header)
+	headers[hKey] = []string{""}
+	headers[hTo] = []string{receiver}
+
+	runFailingRawHandlerTest(t, headers, payload, payload, receiveRaw, tm.receiveRaw)
+}
+
 func TestPush(t *testing.T) {
 
 	epl := api.EncryptedPayload{
@@ -237,6 +251,32 @@ func runJsonHandlerTest(
 
 	if !reflect.DeepEqual(response, expected) {
 		t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+	}
+}
+func runFailingRawHandlerTest(
+	t *testing.T,
+	headers http.Header,
+	payload, expected []byte,
+	url string,
+	handlerFunc http.HandlerFunc) {
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v[0])
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler := http.HandlerFunc(handlerFunc)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status == http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
 	}
 }
 
@@ -372,4 +412,45 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 		t.Errorf("handler returned unexpected body: got %v wanted %v\n",
 			rr.Body.Bytes(), payload)
 	}
+}
+
+func TestInit(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestInit")
+	if err != nil {
+		t.Error(err)
+	}
+	db, err := storage.InitLevelDb(dbPath)
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	pubKeyFiles := []string{"key.pub"}
+	privKeyFiles := []string{"key"}
+
+	for i, keyFile := range privKeyFiles {
+		privKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
+	}
+
+	for i, keyFile := range pubKeyFiles {
+		pubKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
+	}
+
+	key := []nacl.Key{nacl.NewKey()}
+
+	pi := api.CreatePartyInfo(
+		"http://localhost:9000",
+		[]string{"http://localhost:9001"},
+		key,
+		http.DefaultClient)
+
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
+
+	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
+	if err != nil {
+		t.Error(err)
+	}
+	tm, err := Init(enc, 9001, ipcPath)
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
 }

@@ -109,9 +109,8 @@ Q := $(if $V,,@)
 
 .PHONY: bin/gocovmerge bin/goimports
 bin/gocovmerge: .GOPATH/.ok
-	@test -d ./vendor/github.com/wadey/gocovmerge || \
+	@test -f ./bin/gocovmerge || \
 	    { echo "Vendored gocovmerge not found, try running 'make setup'..."; exit 1; }
-	$Q go install $(IMPORT_PATH)/vendor/github.com/wadey/gocovmerge
 bin/goimports: .GOPATH/.ok
 	@test -d ./vendor/golang.org/x/tools/cmd/goimports || \
 	    { echo "Vendored goimports not found, try running 'make setup'..."; exit 1; }

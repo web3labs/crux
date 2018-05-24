@@ -59,7 +59,7 @@ func InitFlags() {
 	// TLS is not currently supported
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	viper.BindPFlags(pflag.CommandLine)
+	viper.BindPFlags(pflag.CommandLine)  // Binding the flags to test the initial configuration
 }
 
 // Usage prints usage instructions to the console.

@@ -83,7 +83,7 @@ demonstrated below.
 
 ## Logical architecture
 
-![Logical architecture](https://github.com/blk-io/crux/docs/quorum-architecture.png)
+![Logical architecture](https://github.com/blk-io/crux/blob/master/docs/quorum-architecture.png)
 
 ## Why Crux?
 

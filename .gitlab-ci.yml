@@ -34,3 +34,17 @@ compile:
     artifacts:
       paths:
         - crux
+
+code_coverage:
+    stage: test
+    script:
+      - rm -f $GOPATH/cover/*.out $GOPATH/cover/all.merged
+      - mkdir -p $GOPATH/cover
+      - for MOD in $(go list ./... | grep -v /vendor/); do \
+        - go test -coverpkg=`echo $(go list ./... | grep -v /vendor/)|tr " " ","` \
+        - -coverprofile "$GOPATH/cover/unit-`echo $MOD|tr "/" "_"|tr "." "_"`.out" \
+        - $MOD 2>&1 | grep -v "no packages being tested depend on"; \
+        - done
+      - ./bin/gocovmerge $GOPATH/cover/*.out > $GOPATH/cover/all.merged
+      - go tool cover -html $GOPATH/cover/all.merged
+

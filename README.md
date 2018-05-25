@@ -2,8 +2,6 @@
 
 <a href="https://quorumslack.azurewebsites.net" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://quorumslack.azurewebsites.net/badge.svg" alt="Quorum Slack" /></a>
 
-[![Build Status](https://gitlab.com/blk-io/crux//badges/master/build.svg)](https://gitlab.com/blk-io/crux//commits/master)  [![Coverage Report](https://gitlab.com/blk-io/crux/badges/master/coverage.svg)](http://blk-io.gitlab.io/crux)
-
 Data privacy for Quorum. 
 
 Crux is a secure enclave for Quorum written in Golang. 

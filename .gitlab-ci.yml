@@ -15,6 +15,7 @@ before_script:
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
   - go get ./...
+  - make setup
 
 stages:
     - build
@@ -25,12 +26,12 @@ format:
     script:
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
-      - go test -race $(go list ./... | grep -v /vendor/)
+      - make test
 
 compile:
     stage: build
     script:
-      - go build -race -o $CI_PROJECT_DIR/crux
+      - make build
     artifacts:
       paths:
         - crux
@@ -40,11 +41,5 @@ code_coverage:
     script:
       - rm -f $GOPATH/cover/*.out $GOPATH/cover/all.merged
       - mkdir -p $GOPATH/cover
-      - for MOD in $(go list ./... | grep -v /vendor/); do \
-        - go test -coverpkg=`echo $(go list ./... | grep -v /vendor/)|tr " " ","` \
-        - -coverprofile "$GOPATH/cover/unit-`echo $MOD|tr "/" "_"|tr "." "_"`.out" \
-        - $MOD 2>&1 | grep -v "no packages being tested depend on"; \
-        - done
-      - ./bin/gocovmerge $GOPATH/cover/*.out > $GOPATH/cover/all.merged
-      - go tool cover -html $GOPATH/cover/all.merged
+      - make cover
 

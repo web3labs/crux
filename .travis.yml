@@ -4,11 +4,21 @@ go:
   - "1.10.x"
   - tip
 
+env:
+  REPO_NAME: github.com/blk-io/crux
+
 before_install:
-  - go get -t -v ./...
+  - sudo apt-get update -qq && apt-get install -y -qq libdb-dev libpthread-stubs0-dev # This is hopefully temporary until we completely remove BerkeleyDB.
+  - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
+  - ln -svf $TRAVIS_BUILD_DIR $GOPATH/src/$REPO_NAME
+  - cd $GOPATH/src/$REPO_NAME
+  - go get ./...
+  - make setup
 
 script:
-  - go test -race -coverprofile=coverage.txt -covermode=atomic
+  - make build
+  - make test
+  - make cover
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

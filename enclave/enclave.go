@@ -380,7 +380,7 @@ func (s *SecureEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*
 			return &encoded, nil
 		}
 	}
-	return nil, fmt.Errorf("invalid recipient %q requested for payload", reqRecipient)
+	return nil, fmt.Errorf("invalid recipient %x requested for payload", reqRecipient)
 }
 
 // RetrieveAllFor retrieves all payloads that the specified recipient was an original recipient

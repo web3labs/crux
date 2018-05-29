@@ -1,6 +1,7 @@
 # Crux 
 
 <a href="https://quorumslack.azurewebsites.net" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://quorumslack.azurewebsites.net/badge.svg" alt="Quorum Slack" /></a>
+<a href="https://travis-ci.org/blk-io/crux/"><img title="Quorum Slack" src="https://travis-ci.org/blk-io/crux.svg?branch=master" alt="Build Status" /></a>
 
 Data privacy for Quorum. 
 

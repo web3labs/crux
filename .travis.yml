@@ -8,7 +8,7 @@ env:
   REPO_NAME: github.com/blk-io/crux
 
 before_install:
-  - sudo apt-get update -qq && apt-get install -y -qq libdb-dev libpthread-stubs0-dev # This is hopefully temporary until we completely remove BerkeleyDB.
+  - apt-get update -qq && apt-get install -y -qq libdb-dev libpthread-stubs0-dev # This is hopefully temporary until we completely remove BerkeleyDB.
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $TRAVIS_BUILD_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME

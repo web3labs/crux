@@ -124,8 +124,6 @@ func main() {
 		log.Fatalf("Error starting server: %v\n", err)
 	}
 
-
-
 	pi.PollPartyInfo()
 
 	select {}

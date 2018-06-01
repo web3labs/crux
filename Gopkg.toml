@@ -55,15 +55,6 @@
 
 [prune]
   go-tests = true
-  unused-packages = true
-
-  [[prune.project]]
-    name = "github.com/grpc-ecosystem/grpc-gateway"
-    unused-packages = false
-
-  [[prune.project]]
-    name = "google.golang.org/grpc"
-    unused-packages = false
 
 [[constraint]]
   name = "github.com/grpc-ecosystem/grpc-gateway"

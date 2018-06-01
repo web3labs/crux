@@ -93,6 +93,7 @@ setup: clean .GOPATH/.ok
 	go get -u golang.org/x/tools/cmd/goimports
 	go get -u github.com/wadey/gocovmerge
 	go get -u github.com/golang/protobuf/protoc-gen-go
+	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
 	@test -f Gopkg.toml || \
 		(cd $(CURDIR)/.GOPATH/src/$(IMPORT_PATH) && ./bin/dep init)
 	(cd $(CURDIR)/.GOPATH/src/$(IMPORT_PATH) && ./bin/dep ensure)

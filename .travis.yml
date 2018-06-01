@@ -16,6 +16,10 @@ before_install:
   - unzip protoc-3.5.1-linux-x86_64.zip -d protoc3
   - sudo mv protoc3/bin/* /usr/local/bin/
   - sudo mv protoc3/include/* /usr/local/include/
+  - go get -u github.com/golang/protobuf/protoc-gen-go
+  - go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
+  - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure
   - make setup
 
 script:

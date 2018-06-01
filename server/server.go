@@ -69,37 +69,46 @@ func requestLogger(handler http.Handler) http.Handler {
 }
 
 // Init initializes a new TransactionManager instance.
-func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
+func Init(enc Enclave, port int, ipcPath string, grpc bool) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
+	var err error
 
-	httpServer := http.NewServeMux()
-	httpServer.HandleFunc(upCheck, tm.upcheck)
-	httpServer.HandleFunc(version, tm.version)
-	httpServer.HandleFunc(push, tm.push)
-	httpServer.HandleFunc(resend, tm.resend)
-	httpServer.HandleFunc(partyInfo, tm.partyInfo)
+	if grpc == true {
+		err = startRPCServer(port)
+	} else {
+		httpServer := http.NewServeMux()
+		httpServer.HandleFunc(upCheck, tm.upcheck)
+		httpServer.HandleFunc(version, tm.version)
+		httpServer.HandleFunc(push, tm.push)
+		httpServer.HandleFunc(resend, tm.resend)
+		httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
-	serverUrl := "localhost:" + strconv.Itoa(port)
-	go func() {
-		log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
-	}()
-	log.Infof("HTTP server is running at: %s", serverUrl)
+		serverUrl := "localhost:" + strconv.Itoa(port)
+		go func () {
+			log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
+		}()
+		log.Infof("HTTP server is running at: %s", serverUrl)
 
-	// Restricted to IPC
-	ipcServer := http.NewServeMux()
-	ipcServer.HandleFunc(upCheck, tm.upcheck)
-	ipcServer.HandleFunc(version, tm.version)
-	ipcServer.HandleFunc(send, tm.send)
-	ipcServer.HandleFunc(sendRaw, tm.sendRaw)
-	ipcServer.HandleFunc(receive, tm.receive)
-	ipcServer.HandleFunc(receiveRaw, tm.receiveRaw)
-	ipcServer.HandleFunc(delete, tm.delete)
+		// Restricted to IPC
+		ipcServer := http.NewServeMux()
+		ipcServer.HandleFunc(upCheck, tm.upcheck)
+		ipcServer.HandleFunc(version, tm.version)
+		ipcServer.HandleFunc(send, tm.send)
+		ipcServer.HandleFunc(sendRaw, tm.sendRaw)
+		ipcServer.HandleFunc(receive, tm.receive)
+		ipcServer.HandleFunc(receiveRaw, tm.receiveRaw)
+		ipcServer.HandleFunc(delete, tm.delete)
 
-	ipc, err := utils.CreateIpcSocket(ipcPath)
-	go func() {
-		log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
-	}()
-	log.Infof("IPC server is running at: %s", ipcPath)
+		ipc, err := utils.CreateIpcSocket(ipcPath)
+		if err != nil {
+			log.Fatalf("Failed to start IPC Server at %s", ipcPath)
+		}
+		go func() {
+			log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
+		}()
+		log.Infof("IPC server is running at: %s", ipcPath)
+	}
+
 	return tm, err
 }
 

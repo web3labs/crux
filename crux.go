@@ -117,10 +117,14 @@ func main() {
 		log.Fatalln("Port must be specified")
 	}
 
-	_, err = server.Init(enc, port, ipcPath)
+	grpc := config.GetBool(config.UseGRPC)
+
+	_, err = server.Init(enc, port, ipcPath, grpc)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}
+
+
 
 	pi.PollPartyInfo()
 

@@ -1,0 +1,30 @@
+syntax = "proto3";
+package server;
+
+import "google/api/annotations.proto";
+
+message apiVersion{
+    string version = 1;
+}
+message upCheckResp{
+    string upcheck = 1;
+}
+message Tm{
+    apiVersion vers = 1;
+}
+
+service client {
+    rpc version(Tm) returns (apiVersion) {
+        option (google.api.http) = {
+        post: "/version"
+        body: "*"
+    };
+    }
+
+    rpc upcheck(Tm) returns (upCheckResp) {
+        option (google.api.http) = {
+        post: "/upcheck"
+        body: "*"
+    };
+    }
+}

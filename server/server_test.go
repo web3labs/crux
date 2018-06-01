@@ -448,7 +448,7 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tm, err := Init(enc, 9001, ipcPath)
+	tm, err := Init(enc, 9001, ipcPath, false)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

@@ -11,8 +11,23 @@ IGNORED_PACKAGES := /vendor/
 .PHONY: all
 all: build
 
+protofiles: server/server.pb.gp server/server.pb.gw.go
+
+server/server.pb.gp: server/server.proto
+	$Q protoc -I server/ \
+		-I $(GOPATH)/../vendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		--go_out=plugins=grpc:server \
+		server/server.proto
+
+server/server.pb.gw.go: server/server.proto
+	$Q protoc -I server/ \
+		-I $(GOPATH)/../vendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
+		--grpc-gateway_out=logtostderr=true:server \
+		server/server.proto
+
+
 .PHONY: build
-build: .GOPATH/.ok
+build: protofiles .GOPATH/.ok
 	$Q go install $(if $V,-v) $(VERSION_FLAGS) $(IMPORT_PATH)
 
 ### Code not in the repository root? Another binary? Add to the path like this.
@@ -77,6 +92,7 @@ setup: clean .GOPATH/.ok
 	go get -u github.com/golang/dep/cmd/dep
 	go get -u golang.org/x/tools/cmd/goimports
 	go get -u github.com/wadey/gocovmerge
+	go get -u github.com/golang/protobuf/protoc-gen-go
 	@test -f Gopkg.toml || \
 		(cd $(CURDIR)/.GOPATH/src/$(IMPORT_PATH) && ./bin/dep init)
 	(cd $(CURDIR)/.GOPATH/src/$(IMPORT_PATH) && ./bin/dep ensure)

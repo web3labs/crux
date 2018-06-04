@@ -1,0 +1,14 @@
+syntax = "proto3";
+package server;
+
+import "google/api/annotations.proto";
+
+message apiVersion{
+    string version = 1;
+}
+message upCheckResp{
+    string upcheck = 1;
+}
+message Tm{
+    apiVersion vers = 1;
+}

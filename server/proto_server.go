@@ -22,7 +22,6 @@ func startRPCServer(port int) error {
 		log.Fatal(grpcServer.Serve(lis))
 	}()
 
-
 	go func() error {
 		err := startRESTServer(port)
 		if err != nil {

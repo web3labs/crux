@@ -91,7 +91,7 @@ func (tm *TransactionManager) startHTTPserver(port int, ipcPath string) error {
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
 	serverUrl := "localhost:" + strconv.Itoa(port)
-	go func () {
+	go func() {
 		log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
 	}()
 	log.Infof("HTTP server is running at: %s", serverUrl)

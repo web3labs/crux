@@ -3,12 +3,12 @@ package server;
 
 import "google/api/annotations.proto";
 
-message apiVersion{
+message ApiVersion{
     string version = 1;
 }
-message upCheckResp{
-    string upcheck = 1;
+message UpCheckResponse{
+    string up_check = 1;
 }
 message Tm{
-    apiVersion vers = 1;
+    ApiVersion vers = 1;
 }

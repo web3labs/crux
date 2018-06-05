@@ -6,14 +6,14 @@ import "messages.proto";
 
 
 service client {
-    rpc version(Tm) returns (apiVersion) {
+    rpc version(Tm) returns (ApiVersion) {
         option (google.api.http) = {
         post: "/version"
         body: "*"
     };
     }
 
-    rpc upcheck(Tm) returns (upCheckResp) {
+    rpc upcheck(Tm) returns (UpCheckResponse) {
         option (google.api.http) = {
         post: "/upcheck"
         body: "*"

@@ -12,8 +12,11 @@ import (
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"path"
 	"io/ioutil"
+	"fmt"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -113,6 +116,45 @@ func TestSend(t *testing.T) {
 
 	for _, sendReq := range sendReqs {
 		runJsonHandlerTest(t, &sendReq, &response, &expected, send, tm.send)
+	}
+}
+
+func TestGRPCSend(t *testing.T) {
+	sendReqs := []SendRequest{
+		{
+			Payload: encodedPayload,
+			From: sender,
+			To: []string{receiver},
+		},
+		{
+			Payload: encodedPayload,
+			To: []string{},
+		},
+		{
+			Payload: encodedPayload,
+		},
+	}
+	expected := SendResponse{Key: encodedPayload}
+
+	ipcPath := InitgRPCServer(t, true)
+
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Connection to gRPC server failed with error %s", err)
+	}
+	defer conn.Close()
+	c := NewClientClient(conn)
+
+	for _, sendReq := range sendReqs {
+		resp, err:= c.Send(context.Background(), &sendReq)
+		if err != nil {
+			t.Fatalf("gRPC send failed with %s", err)
+		}
+		response := SendResponse{Key:resp.Key}
+		if !reflect.DeepEqual(response, expected) {
+			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+		}
 	}
 }
 
@@ -412,6 +454,17 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 		t.Errorf("handler returned unexpected body: got %v wanted %v\n",
 			rr.Body.Bytes(), payload)
 	}
+}
+
+func InitgRPCServer(t *testing.T, grpc bool) (string) {
+	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
+	tm, err := Init(&MockEnclave{}, 9005, ipcPath, grpc)
+
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
+	return ipcPath
 }
 
 func TestInit(t *testing.T) {

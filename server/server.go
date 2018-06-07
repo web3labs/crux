@@ -74,7 +74,8 @@ func Init(enc Enclave, port int, ipcPath string, grpc bool) (TransactionManager,
 	var err error
 
 	if grpc == true {
-		err = startRPCServer(port)
+		err = tm.startRPCServer(port, ipcPath)
+
 	} else {
 		err = tm.startHTTPserver(port, ipcPath)
 	}

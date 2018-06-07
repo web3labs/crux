@@ -1,21 +1,22 @@
 package server
 
 import (
-	"net"
 	"fmt"
 	"google.golang.org/grpc"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"net/http"
+	"github.com/blk-io/crux/utils"
+	"net"
 )
 
-func startRPCServer(port int) error {
-	lis, err := net.Listen("tcp", fmt.Sprintf("%s:%d", "localhost", port - 1))
+func (tm *TransactionManager) startRPCServer(port int, ipcPath string) error {
+	lis, err := utils.CreateIpcSocket(ipcPath)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := Server{}
+	s := Server{Enclave : tm.Enclave}
 	grpcServer := grpc.NewServer()
 	RegisterClientServer(grpcServer, &s)
 	go func() {
@@ -23,7 +24,7 @@ func startRPCServer(port int) error {
 	}()
 
 	go func() error {
-		err := startRESTServer(port)
+		err := tm.startRESTServer(port)
 		if err != nil {
 			log.Fatalf("failed to start gRPC REST server: %s", err)
 		}
@@ -33,15 +34,24 @@ func startRPCServer(port int) error {
 	return err
 }
 
-func startRESTServer(port int) error {
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port - 1)
+func (tm *TransactionManager) startRESTServer(port int) error {
+	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port-1)
+	lis, err := net.Listen("tcp", grpcAddress)
+
+	s := Server{Enclave : tm.Enclave}
+	grpcServer := grpc.NewServer()
+	RegisterClientServer(grpcServer, &s)
+	go func() {
+		log.Fatal(grpcServer.Serve(lis))
+	}()
+
 	address := fmt.Sprintf("%s:%d", "localhost", port)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err := RegisterClientHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
+	err = RegisterClientHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
 	if err != nil {
 		return fmt.Errorf("could not register service Ping: %s", err)
 	}

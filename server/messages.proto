@@ -11,4 +11,14 @@ message UpCheckResponse{
 }
 message Tm{
     ApiVersion vers = 1;
+    SendRequest req = 2;
+    SendResponse resp = 3;
+}
+message SendRequest{
+    string Payload = 1;
+    string From = 2;
+    repeated string To = 3;
+}
+message SendResponse{
+    string Key = 1;
 }

@@ -69,9 +69,21 @@ func requestLogger(handler http.Handler) http.Handler {
 }
 
 // Init initializes a new TransactionManager instance.
-func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
+func Init(enc Enclave, port int, ipcPath string, grpc bool) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
+	var err error
 
+	if grpc == true {
+		err = tm.startRpcServer(port, ipcPath)
+
+	} else {
+		err = tm.startHttpserver(port, ipcPath)
+	}
+
+	return tm, err
+}
+
+func (tm *TransactionManager) startHttpserver(port int, ipcPath string) error {
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
 	httpServer.HandleFunc(version, tm.version)
@@ -96,11 +108,15 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket(ipcPath)
+	if err != nil {
+		log.Fatalf("Failed to start IPC Server at %s", ipcPath)
+	}
 	go func() {
 		log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
 	}()
 	log.Infof("IPC server is running at: %s", ipcPath)
-	return tm, err
+
+	return err
 }
 
 func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {

@@ -1,0 +1,26 @@
+syntax = "proto3";
+package server;
+
+import "google/api/annotations.proto";
+
+message ApiVersion{
+    string version = 1;
+}
+message UpCheckResponse{
+    string message = 1;
+}
+message SendRequest{
+    bytes payload = 1;
+    string from = 2;
+    repeated string to = 3;
+}
+message SendResponse{
+    bytes key = 1;
+}
+message ReceiveRequest{
+    bytes key = 1;
+    string to = 2;
+}
+message ReceiveResponse{
+    bytes payload = 1;
+}

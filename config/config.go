@@ -24,6 +24,7 @@ const (
 	GenerateKeys = "generate-keys"
 
 	BerkeleyDb = "berkeleydb"
+	UseGRPC = "grpc"
 
 	Tls = "tls"
 	TlsServerChain = "tlsserverchain"
@@ -54,6 +55,7 @@ func InitFlags() {
 
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
+	flag.Bool(UseGRPC, false, "Use gRPC server")
 
 	// storage not currently supported as we use LevelDB
 	// TLS is not currently supported

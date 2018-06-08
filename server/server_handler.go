@@ -12,26 +12,20 @@ type Server struct {
 	Enclave Enclave
 }
 
-func (s *Server) Version(ctx context.Context, in *Tm) (*ApiVersion, error) {
+func (s *Server) Version(ctx context.Context, in *ApiVersion) (*ApiVersion, error) {
 	return &ApiVersion{Version:apiVersion}, nil
 }
 
-func (s *Server) Upcheck(ctx context.Context, in *Tm) (*UpCheckResponse, error) {
-	return &UpCheckResponse{UpCheck:upCheckResponse}, nil
+func (s *Server) Upcheck(ctx context.Context, in *UpCheckResponse) (*UpCheckResponse, error) {
+	return &UpCheckResponse{Message:upCheckResponse}, nil
 }
 func (s *Server) Send(ctx context.Context, in *SendRequest) (*SendResponse, error) {
-	payload, err := base64.StdEncoding.DecodeString(in.Payload)
-	if err != nil {
-		decodeErrorGRPC("payload", in.GetPayload(), err)
-	}
-
-	key, err := s.processSend(in.GetFrom(), in.GetTo(), &payload)
+	key, err := s.processSend(in.GetFrom(), in.GetTo(), &in.Payload)
 	var sendResp SendResponse
 	if err != nil {
 		log.Error(err)
 	} else {
-		encodedKey := base64.StdEncoding.EncodeToString(key)
-		sendResp = SendResponse{Key: encodedKey}
+		sendResp = SendResponse{Key: key}
 	}
 	return &sendResp, err
 }
@@ -61,6 +55,30 @@ func (s *Server) processSend(b64from string, b64recipients []string, payload *[]
 	}
 
 	return s.Enclave.Store(payload, sender, recipients)
+}
+
+func (s *Server) Receive(ctx context.Context, in *ReceiveRequest) (*ReceiveResponse, error) {
+	payload, err := s.processReceive(in.Key, in.To)
+	var receiveResp ReceiveResponse
+	if err != nil {
+		log.Error(err)
+	} else {
+		receiveResp = ReceiveResponse{Payload: payload}
+	}
+	return &receiveResp, err
+}
+
+func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
+	if b64To != "" {
+		to, err := base64.StdEncoding.DecodeString(b64To)
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode to: %s", b64Key)
+		}
+
+		return s.Enclave.Retrieve(&b64Key, &to)
+	} else {
+		return s.Enclave.RetrieveDefault(&b64Key)
+	}
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

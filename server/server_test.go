@@ -122,21 +122,21 @@ func TestSend(t *testing.T) {
 func TestGRPCSend(t *testing.T) {
 	sendReqs := []SendRequest{
 		{
-			Payload: encodedPayload,
+			Payload: payload,
 			From: sender,
 			To: []string{receiver},
 		},
 		{
-			Payload: encodedPayload,
+			Payload: payload,
 			To: []string{},
 		},
 		{
-			Payload: encodedPayload,
+			Payload: payload,
 		},
 	}
-	expected := SendResponse{Key: encodedPayload}
+	expected := SendResponse{Key: payload}
 
-	ipcPath := InitgRPCServer(t, true)
+	ipcPath := InitgRPCServer(t, true, 9005)
 
 	var conn *grpc.ClientConn
 	conn, err := grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
@@ -186,6 +186,36 @@ func TestReceive(t *testing.T) {
 
 	for _, receiveReq := range receiveReqs {
 		runJsonHandlerTest(t, &receiveReq, &response, &expected, receive, tm.receive)
+	}
+}
+
+func TestGRPCReceive(t *testing.T) {
+	receiveReqs := []ReceiveRequest{
+		{
+			Key: payload,
+			To: receiver,
+		},
+	}
+	expected := ReceiveResponse{Payload: payload}
+
+	ipcPath := InitgRPCServer(t, true, 9010)
+	var conn *grpc.ClientConn
+	conn, err := grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Connection to gRPC server failed with error %s", err)
+	}
+	defer conn.Close()
+	c := NewClientClient(conn)
+
+	for _, receiveReq := range receiveReqs {
+		resp, err:= c.Receive(context.Background(), &receiveReq)
+		if err != nil {
+			t.Fatalf("gRPC receive failed with %s", err)
+		}
+		response := ReceiveResponse{Payload:resp.Payload}
+		if !reflect.DeepEqual(response, expected) {
+			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+		}
 	}
 }
 
@@ -456,9 +486,9 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 	}
 }
 
-func InitgRPCServer(t *testing.T, grpc bool) (string) {
+func InitgRPCServer(t *testing.T, grpc bool, port int) (string) {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, 9005, ipcPath, grpc)
+	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc)
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)

@@ -74,16 +74,16 @@ func Init(enc Enclave, port int, ipcPath string, grpc bool) (TransactionManager,
 	var err error
 
 	if grpc == true {
-		err = tm.startRPCServer(port, ipcPath)
+		err = tm.startRpcServer(port, ipcPath)
 
 	} else {
-		err = tm.startHTTPserver(port, ipcPath)
+		err = tm.startHttpserver(port, ipcPath)
 	}
 
 	return tm, err
 }
 
-func (tm *TransactionManager) startHTTPserver(port int, ipcPath string) error {
+func (tm *TransactionManager) startHttpserver(port int, ipcPath string) error {
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
 	httpServer.HandleFunc(version, tm.version)

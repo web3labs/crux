@@ -7,18 +7,20 @@ message ApiVersion{
     string version = 1;
 }
 message UpCheckResponse{
-    string up_check = 1;
-}
-message Tm{
-    ApiVersion vers = 1;
-    SendRequest req = 2;
-    SendResponse resp = 3;
+    string message = 1;
 }
 message SendRequest{
-    string Payload = 1;
-    string From = 2;
-    repeated string To = 3;
+    bytes payload = 1;
+    string from = 2;
+    repeated string to = 3;
 }
 message SendResponse{
-    string Key = 1;
+    bytes key = 1;
+}
+message ReceiveRequest{
+    bytes key = 1;
+    string to = 2;
+}
+message ReceiveResponse{
+    bytes payload = 1;
 }

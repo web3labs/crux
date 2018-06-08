@@ -11,7 +11,7 @@ import (
 	"net"
 )
 
-func (tm *TransactionManager) startRPCServer(port int, ipcPath string) error {
+func (tm *TransactionManager) startRpcServer(port int, ipcPath string) error {
 	lis, err := utils.CreateIpcSocket(ipcPath)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -24,7 +24,7 @@ func (tm *TransactionManager) startRPCServer(port int, ipcPath string) error {
 	}()
 
 	go func() error {
-		err := tm.startRESTServer(port)
+		err := tm.startRestServer(port)
 		if err != nil {
 			log.Fatalf("failed to start gRPC REST server: %s", err)
 		}
@@ -34,7 +34,7 @@ func (tm *TransactionManager) startRPCServer(port int, ipcPath string) error {
 	return err
 }
 
-func (tm *TransactionManager) startRESTServer(port int) error {
+func (tm *TransactionManager) startRestServer(port int) error {
 	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port-1)
 	lis, err := net.Listen("tcp", grpcAddress)
 

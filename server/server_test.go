@@ -462,8 +462,11 @@ func TestPartyInfo(t *testing.T) {
 }
 
 func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
-	encoded := api.EncodePartyInfo(pi)
-
+	encodedPartyInfo := api.EncodePartyInfo(pi)
+	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload:encodedPartyInfo})
+	if err != nil {
+		t.Errorf("Marshalling failed %v", err)
+	}
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)

@@ -420,7 +420,11 @@ func (s *SecureEnclave) UpdatePartyInfo(encoded []byte) {
 
 // GetEncodedPartyInfo provides this SecureEnclaves PartyInfo details in a binary encoded format.
 func (s *SecureEnclave) GetEncodedPartyInfo() []byte {
-	return api.EncodePartyInfo(s.PartyInfo)
+	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload:api.EncodePartyInfo(s.PartyInfo)})
+	if err != nil{
+		log.Errorf("Marshalling failed %v", err)
+	}
+	return encoded
 }
 
 func loadPubKeys(pubKeyFiles []string) ([]nacl.Key, error) {

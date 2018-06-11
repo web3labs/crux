@@ -10,6 +10,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/utils"
 	"encoding/hex"
+	"encoding/json"
 	"net/http/httputil"
 	"fmt"
 )
@@ -105,9 +106,13 @@ func (s *PartyInfo) GetPartyInfo() {
 				"Invalid endpoint provided")
 		}
 
+		encoded, err := json.Marshal(UpdatePartyInfo{encodedPartyInfo})
+		if err != nil {
+			log.Errorf("Marshalling failed %v", err)
+			continue
+		}
 		var req *http.Request
-		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encodedPartyInfo[:]))
-
+		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encoded))
 		if err != nil {
 			log.WithField("url", rawUrl).Errorf(
 				"Error creating /partyinfo request, %v", err)
@@ -122,22 +127,22 @@ func (s *PartyInfo) GetPartyInfo() {
 				"Error sending /partyinfo request, %v", err)
 			continue
 		}
-		
 		if resp.StatusCode != http.StatusOK {
 			log.WithField("url", rawUrl).Errorf(
 				"Error sending /partyinfo request, non-200 status code: %v", resp)
 			continue
 		}
 
-		var encoded []byte
-		encoded, err = ioutil.ReadAll(resp.Body)
+		var partyInfoReq UpdatePartyInfo
+		err = json.NewDecoder(resp.Body).Decode(&partyInfoReq)
+
 		resp.Body.Close()
 		if err != nil {
 			log.WithField("url", rawUrl).Errorf(
 				"Unable to read partyInfo response from host, %v", err)
 			break
 		}
-		s.UpdatePartyInfo(encoded)
+		s.UpdatePartyInfo(partyInfoReq.Payload)
 	}
 }
 

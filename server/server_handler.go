@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"encoding/json"
 )
 
 type Server struct {
@@ -79,6 +80,17 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 	} else {
 		return s.Enclave.RetrieveDefault(&b64Key)
 	}
+}
+
+func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfo, error) {
+	s.Enclave.UpdatePartyInfo(in.Payload)
+	encoded := s.Enclave.GetEncodedPartyInfo()
+	var decodedPartyInfo PartyInfo
+	err := json.Unmarshal(encoded, &decodedPartyInfo)
+	if err != nil{
+		log.Errorf("Unmarshalling failed with %v", err)
+	}
+	return &PartyInfo{Payload: decodedPartyInfo.Payload}, nil
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

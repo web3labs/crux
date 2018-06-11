@@ -364,7 +364,9 @@ func (s *TransactionManager) resend(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request) {
-	payload, err := ioutil.ReadAll(req.Body)
+	var partyInfoReq api.UpdatePartyInfo
+	err := json.NewDecoder(req.Body).Decode(&partyInfoReq)
+	payload := partyInfoReq.Payload
 	req.Body.Close()
 	if err != nil {
 		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))

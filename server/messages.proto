@@ -24,3 +24,6 @@ message ReceiveRequest{
 message ReceiveResponse{
     bytes payload = 1;
 }
+message PartyInfo{
+    bytes payload = 1;
+}

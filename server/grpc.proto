@@ -8,28 +8,26 @@ import "messages.proto";
 service Client {
     rpc Version(ApiVersion) returns (ApiVersion) {
         option (google.api.http) = {
-        post: "/version"
-        body: "*"
-    };
+            post: "/version"
+            body: "*"
+        };
     }
 
     rpc Upcheck(UpCheckResponse) returns (UpCheckResponse) {
         option (google.api.http) = {
-        post: "/upcheck"
-        body: "*"
-    };
+            post: "/upcheck"
+            body: "*"
+        };
     }
 
-    rpc Send(SendRequest) returns (SendResponse) {
-    }
+    rpc Send(SendRequest) returns (SendResponse);
 
-    rpc Receive(ReceiveRequest) returns (ReceiveResponse){
-    }
+    rpc Receive(ReceiveRequest) returns (ReceiveResponse);
 
     rpc UpdatePartyInfo(PartyInfo) returns (PartyInfo) {
         option (google.api.http) = {
-        post: "/partyinfo"
-        body: "*"
-    };
+            post: "/partyinfo"
+            body: "*"
+        };
     }
 }

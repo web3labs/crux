@@ -84,7 +84,7 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 
 func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfo, error) {
 	s.Enclave.UpdatePartyInfo(in.Payload)
-	encoded := s.Enclave.GetEncodedPartyInfo()
+	encoded := s.Enclave.GetEncodedPartyInfo(true)
 	var decodedPartyInfo PartyInfo
 	err := json.Unmarshal(encoded, &decodedPartyInfo)
 	if err != nil{

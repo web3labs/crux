@@ -124,7 +124,7 @@ func main() {
 		log.Fatalf("Error starting server: %v\n", err)
 	}
 
-	pi.PollPartyInfo()
+	pi.PollPartyInfo(grpc)
 
 	select {}
 }

@@ -26,7 +26,7 @@ type Enclave interface {
 	RetrieveAllFor(reqRecipient *[]byte) error
 	Delete(digestHash *[]byte) error
 	UpdatePartyInfo(encoded []byte)
-	GetEncodedPartyInfo() []byte
+	GetEncodedPartyInfo(grpc bool) []byte
 }
 
 // TransactionManager is responsible for handling all transaction requests.
@@ -364,6 +364,18 @@ func (s *TransactionManager) resend(w http.ResponseWriter, req *http.Request) {
 }
 
 func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request) {
+	payload, err := ioutil.ReadAll(req.Body)
+	req.Body.Close()
+	if err != nil {
+		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
+		return
+	} else {
+		s.Enclave.UpdatePartyInfo(payload)
+		w.Write(s.Enclave.GetEncodedPartyInfo(false))
+	}
+}
+
+func (s *TransactionManager) partyInfoGrpc(w http.ResponseWriter, req *http.Request) {
 	var partyInfoReq api.UpdatePartyInfo
 	err := json.NewDecoder(req.Body).Decode(&partyInfoReq)
 	payload := partyInfoReq.Payload
@@ -373,7 +385,7 @@ func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request)
 		return
 	} else {
 		s.Enclave.UpdatePartyInfo(payload)
-		w.Write(s.Enclave.GetEncodedPartyInfo())
+		w.Write(s.Enclave.GetEncodedPartyInfo(true))
 	}
 }
 

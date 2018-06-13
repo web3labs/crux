@@ -419,10 +419,16 @@ func (s *SecureEnclave) UpdatePartyInfo(encoded []byte) {
 }
 
 // GetEncodedPartyInfo provides this SecureEnclaves PartyInfo details in a binary encoded format.
-func (s *SecureEnclave) GetEncodedPartyInfo() []byte {
-	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload: api.EncodePartyInfo(s.PartyInfo)})
-	if err != nil{
-		log.Errorf("Marshalling failed %v", err)
+func (s *SecureEnclave) GetEncodedPartyInfo(grpc bool) []byte {
+	var encoded []byte
+	if grpc {
+		encoded, err := json.Marshal(api.UpdatePartyInfo{Payload: api.EncodePartyInfo(s.PartyInfo)})
+		if err != nil{
+			log.Errorf("Marshalling failed %v", err)
+		}
+		return encoded
+	} else {
+		encoded = api.EncodePartyInfo(s.PartyInfo)
 	}
 	return encoded
 }

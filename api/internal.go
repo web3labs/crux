@@ -106,6 +106,65 @@ func (s *PartyInfo) GetPartyInfo() {
 				"Invalid endpoint provided")
 		}
 
+		var req *http.Request
+		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encodedPartyInfo[:]))
+
+		if err != nil {
+			log.WithField("url", rawUrl).Errorf(
+				"Error creating /partyinfo request, %v", err)
+			break
+		}
+		req.Header.Set("Content-Type", "application/octet-stream")
+
+		logRequest(req)
+		resp, err := s.client.Do(req)
+		if err != nil {
+			log.WithField("url", rawUrl).Errorf(
+				"Error sending /partyinfo request, %v", err)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			log.WithField("url", rawUrl).Errorf(
+				"Error sending /partyinfo request, non-200 status code: %v", resp)
+			continue
+		}
+
+		var encoded []byte
+		encoded, err = ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			log.WithField("url", rawUrl).Errorf(
+				"Unable to read partyInfo response from host, %v", err)
+			break
+		}
+		s.UpdatePartyInfo(encoded)
+	}
+}
+
+// GetPartyInfoGrpc requests PartyInfo data from all remote nodes this node is aware of. The data
+// provided in each response is applied to this node.
+func (s *PartyInfo) GetPartyInfoGrpc() {
+	encodedPartyInfo := EncodePartyInfo(*s)
+
+	// First copy our endpoints as we update this map in place
+	urls := make(map[string]bool)
+	for k, v := range s.parties {
+		urls[k] = v
+	}
+
+	for rawUrl := range urls {
+		if rawUrl == s.url {
+			continue
+		}
+
+		endPoint, err := utils.BuildUrl(rawUrl, "/partyinfo")
+
+		if err != nil {
+			log.WithFields(log.Fields{"rawUrl": rawUrl, "endPoint": "/partyinfo"}).Errorf(
+				"Invalid endpoint provided")
+		}
+
 		encoded, err := json.Marshal(UpdatePartyInfo{encodedPartyInfo})
 		if err != nil {
 			log.Errorf("Marshalling failed %v", err)
@@ -146,7 +205,15 @@ func (s *PartyInfo) GetPartyInfo() {
 	}
 }
 
-func (s *PartyInfo) PollPartyInfo() {
+func (s *PartyInfo) PollPartyInfo(grpc bool) {
+	if grpc{
+		s.PollPartyInfoGrpc()
+	} else {
+		s.PollPartyInfoHttp()
+	}
+}
+
+func (s *PartyInfo) PollPartyInfoHttp() {
 	time.Sleep(time.Duration(rand.Intn(16)) * time.Second)
 	s.GetPartyInfo()
 
@@ -157,6 +224,25 @@ func (s *PartyInfo) PollPartyInfo() {
 			select {
 			case <- ticker.C:
 				s.GetPartyInfo()
+			case <- quit:
+				ticker.Stop()
+				return
+			}
+		}
+	}()
+}
+
+func (s *PartyInfo) PollPartyInfoGrpc() {
+	time.Sleep(time.Duration(rand.Intn(16)) * time.Second)
+	s.GetPartyInfoGrpc()
+
+	ticker := time.NewTicker(2 * time.Minute)
+	quit := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <- ticker.C:
+				s.GetPartyInfoGrpc()
 			case <- quit:
 				ticker.Stop()
 				return

@@ -491,7 +491,7 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 
 func InitgRPCServer(t *testing.T, grpc bool, port int) (string) {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc)
+	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, "", "")
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
@@ -534,7 +534,8 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tm, err := Init(enc, 9001, ipcPath, false)
+	certFile, keyFile := "../cert/server.crt", "../cert/server.key"
+	tm, err := Init(enc, 9001, ipcPath, false, certFile, keyFile)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

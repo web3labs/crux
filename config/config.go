@@ -56,9 +56,10 @@ func InitFlags() {
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
 	flag.Bool(UseGRPC, false, "Use gRPC server")
+	flag.String(TlsServerCert, "", "The server certificate to be used")
+	flag.String(TlsServerKey, "", "The server private key")
 
 	// storage not currently supported as we use LevelDB
-	// TLS is not currently supported
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	viper.BindPFlags(pflag.CommandLine)  // Binding the flags to test the initial configuration

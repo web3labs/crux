@@ -119,7 +119,17 @@ func main() {
 
 	grpc := config.GetBool(config.UseGRPC)
 
-	_, err = server.Init(enc, port, ipcPath, grpc)
+	servCert := config.GetString(config.TlsServerCert)
+	servKey := config.GetString(config.TlsServerKey)
+
+	if (len(servCert) != len(servKey)) || (len(servCert) <= 0) {
+		log.Fatalf("Please provide server certificate and key for TLS %s %s %d ", servKey, servCert, len(servCert))
+	}
+
+	tlsCertFile := path.Join(workDir, servCert)
+	tlsKeyFile := path.Join(workDir, servKey)
+
+	_, err = server.Init(enc, port, ipcPath, grpc, tlsCertFile, tlsKeyFile)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}

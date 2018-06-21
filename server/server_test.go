@@ -57,8 +57,18 @@ func (s* MockEnclave) Delete(digestHash *[]byte) error {
 
 func (s* MockEnclave) UpdatePartyInfo(encoded []byte) {}
 
-func (s* MockEnclave) GetEncodedPartyInfo(grpc bool) []byte {
+func (s* MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
+
+func (s* MockEnclave) GetEncodedPartyInfo() []byte {
 	return payload
+}
+
+func (s* MockEnclave) GetEncodedPartyInfoGrpc() []byte{
+	return payload
+}
+
+func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+	return "", nil, nil
 }
 
 func TestUpcheck(t *testing.T) {

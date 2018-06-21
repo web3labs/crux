@@ -418,19 +418,25 @@ func (s *SecureEnclave) UpdatePartyInfo(encoded []byte) {
 	s.PartyInfo.UpdatePartyInfo(encoded)
 }
 
+func (s *SecureEnclave) UpdatePartyInfoGrpc(url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool) {
+	s.PartyInfo.UpdatePartyInfoGrpc(url, recipients, parties)
+}
+
 // GetEncodedPartyInfo provides this SecureEnclaves PartyInfo details in a binary encoded format.
-func (s *SecureEnclave) GetEncodedPartyInfo(grpc bool) []byte {
-	var encoded []byte
-	if grpc {
-		encoded, err := json.Marshal(api.UpdatePartyInfo{Payload: api.EncodePartyInfo(s.PartyInfo)})
-		if err != nil{
+func (s *SecureEnclave) GetEncodedPartyInfo() []byte {
+	return api.EncodePartyInfo(s.PartyInfo)
+}
+
+func (s *SecureEnclave) GetEncodedPartyInfoGrpc() []byte {
+	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload: api.EncodePartyInfo(s.PartyInfo)})
+	if err != nil{
 			log.Errorf("Marshalling failed %v", err)
-		}
-		return encoded
-	} else {
-		encoded = api.EncodePartyInfo(s.PartyInfo)
 	}
 	return encoded
+}
+
+func (s *SecureEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+	return s.PartyInfo.GetAllValues()
 }
 
 func loadPubKeys(pubKeyFiles []string) ([]nacl.Key, error) {

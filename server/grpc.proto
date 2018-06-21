@@ -24,7 +24,7 @@ service Client {
 
     rpc Receive(ReceiveRequest) returns (ReceiveResponse);
 
-    rpc UpdatePartyInfo(PartyInfo) returns (PartyInfo) {
+    rpc UpdatePartyInfo(PartyInfo) returns (PartyInfoResponse) {
         option (google.api.http) = {
             post: "/partyinfo"
             body: "*"

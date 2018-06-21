@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"net/textproto"
 	"net/http/httputil"
+	"github.com/kevinburke/nacl"
 )
 
 // Enclave is the interface used by the transaction enclaves.
@@ -26,7 +27,10 @@ type Enclave interface {
 	RetrieveAllFor(reqRecipient *[]byte) error
 	Delete(digestHash *[]byte) error
 	UpdatePartyInfo(encoded []byte)
-	GetEncodedPartyInfo(grpc bool) []byte
+	UpdatePartyInfoGrpc(url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
+	GetEncodedPartyInfo() []byte
+	GetEncodedPartyInfoGrpc() []byte
+	GetPartyInfo() (url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
 }
 
 // TransactionManager is responsible for handling all transaction requests.
@@ -371,21 +375,7 @@ func (s *TransactionManager) partyInfo(w http.ResponseWriter, req *http.Request)
 		return
 	} else {
 		s.Enclave.UpdatePartyInfo(payload)
-		w.Write(s.Enclave.GetEncodedPartyInfo(false))
-	}
-}
-
-func (s *TransactionManager) partyInfoGrpc(w http.ResponseWriter, req *http.Request) {
-	var partyInfoReq api.UpdatePartyInfo
-	err := json.NewDecoder(req.Body).Decode(&partyInfoReq)
-	payload := partyInfoReq.Payload
-	req.Body.Close()
-	if err != nil {
-		internalServerError(w, fmt.Sprintf("Unable to read request body, error: %s\n", err))
-		return
-	} else {
-		s.Enclave.UpdatePartyInfo(payload)
-		w.Write(s.Enclave.GetEncodedPartyInfo(true))
+		w.Write(s.Enclave.GetEncodedPartyInfo())
 	}
 }
 

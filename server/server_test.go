@@ -34,6 +34,9 @@ func (s* MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte)
 func (s* MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
+func (s* MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
+	return encoded, nil
+}
 
 func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
@@ -57,8 +60,18 @@ func (s* MockEnclave) Delete(digestHash *[]byte) error {
 
 func (s* MockEnclave) UpdatePartyInfo(encoded []byte) {}
 
-func (s* MockEnclave) GetEncodedPartyInfo(grpc bool) []byte {
+func (s* MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
+
+func (s* MockEnclave) GetEncodedPartyInfo() []byte {
 	return payload
+}
+
+func (s* MockEnclave) GetEncodedPartyInfoGrpc() []byte{
+	return payload
+}
+
+func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+	return "", nil, nil
 }
 
 func TestUpcheck(t *testing.T) {
@@ -251,12 +264,10 @@ func TestPush(t *testing.T) {
 	var recipients [][]byte
 
 	encoded := api.EncodePayloadWithRecipients(epl, recipients)
-
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	rr := httptest.NewRecorder()
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 

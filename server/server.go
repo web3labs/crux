@@ -14,11 +14,14 @@ import (
 	"encoding/hex"
 	"net/textproto"
 	"net/http/httputil"
+	"os"
+	"github.com/kevinburke/nacl"
 )
 
 // Enclave is the interface used by the transaction enclaves.
 type Enclave interface {
 	Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error)
+	StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error)
 	StorePayload(encoded []byte) ([]byte, error)
 	Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error)
 	RetrieveDefault(digestHash *[]byte) ([]byte, error)
@@ -26,7 +29,10 @@ type Enclave interface {
 	RetrieveAllFor(reqRecipient *[]byte) error
 	Delete(digestHash *[]byte) error
 	UpdatePartyInfo(encoded []byte)
+	UpdatePartyInfoGrpc(url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
 	GetEncodedPartyInfo() []byte
+	GetEncodedPartyInfoGrpc() []byte
+	GetPartyInfo() (url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
 }
 
 // TransactionManager is responsible for handling all transaction requests.
@@ -69,21 +75,21 @@ func requestLogger(handler http.Handler) http.Handler {
 }
 
 // Init initializes a new TransactionManager instance.
-func Init(enc Enclave, port int, ipcPath string, grpc bool) (TransactionManager, error) {
+func Init(enc Enclave, port int, ipcPath string, grpc bool, tls bool, certFile, keyFile string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 	var err error
 
 	if grpc == true {
-		err = tm.startRpcServer(port, ipcPath)
+		err = tm.startRpcServer(port, ipcPath, tls, certFile, keyFile)
 
 	} else {
-		err = tm.startHttpserver(port, ipcPath)
+		err = tm.startHttpserver(port, ipcPath, tls, certFile, keyFile)
 	}
 
 	return tm, err
 }
 
-func (tm *TransactionManager) startHttpserver(port int, ipcPath string) error {
+func (tm *TransactionManager) startHttpserver(port int, ipcPath string, tls bool, certFile, keyFile string) error {
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
 	httpServer.HandleFunc(version, tm.version)
@@ -92,10 +98,21 @@ func (tm *TransactionManager) startHttpserver(port int, ipcPath string) error {
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
 	serverUrl := "localhost:" + strconv.Itoa(port)
-	go func() {
-		log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
-	}()
-	log.Infof("HTTP server is running at: %s", serverUrl)
+	if tls{
+		err := CheckCertFiles(certFile, keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go func() {
+			log.Fatal(http.ListenAndServeTLS(serverUrl, certFile, keyFile, requestLogger(httpServer)))
+		}()
+		log.Infof("HTTPS server is running at: %s", serverUrl)
+	} else {
+		go func() {
+			log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
+		}()
+		log.Infof("HTTP server is running at: %s", serverUrl)
+	}
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
@@ -117,6 +134,15 @@ func (tm *TransactionManager) startHttpserver(port int, ipcPath string) error {
 	log.Infof("IPC server is running at: %s", ipcPath)
 
 	return err
+}
+
+func CheckCertFiles(certFile, keyFile string) error {
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		return err
+	} else if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {

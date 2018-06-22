@@ -45,6 +45,9 @@ type ResendRequest struct {
 	Key        string  `json:"key,omitempty"`
 }
 
+type UpdatePartyInfo struct {
+	Payload []byte `json:"payload"`
+}
 
 type PrivateKeyBytes struct {
 	Bytes  string  `json:"bytes"`

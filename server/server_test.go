@@ -34,6 +34,9 @@ func (s* MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte)
 func (s* MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
+func (s* MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
+	return encoded, nil
+}
 
 func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
@@ -57,8 +60,18 @@ func (s* MockEnclave) Delete(digestHash *[]byte) error {
 
 func (s* MockEnclave) UpdatePartyInfo(encoded []byte) {}
 
+func (s* MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
+
 func (s* MockEnclave) GetEncodedPartyInfo() []byte {
 	return payload
+}
+
+func (s* MockEnclave) GetEncodedPartyInfoGrpc() []byte{
+	return payload
+}
+
+func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+	return "", nil, nil
 }
 
 func TestUpcheck(t *testing.T) {
@@ -251,12 +264,10 @@ func TestPush(t *testing.T) {
 	var recipients [][]byte
 
 	encoded := api.EncodePayloadWithRecipients(epl, recipients)
-
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	rr := httptest.NewRecorder()
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 
@@ -462,8 +473,11 @@ func TestPartyInfo(t *testing.T) {
 }
 
 func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
-	encoded := api.EncodePartyInfo(pi)
-
+	encodedPartyInfo := api.EncodePartyInfo(pi)
+	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload:encodedPartyInfo})
+	if err != nil {
+		t.Errorf("Marshalling failed %v", err)
+	}
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
@@ -488,7 +502,7 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 
 func InitgRPCServer(t *testing.T, grpc bool, port int) (string) {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc)
+	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, false, "", "")
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
@@ -531,7 +545,8 @@ func TestInit(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	tm, err := Init(enc, 9001, ipcPath, false)
+	certFile, keyFile := "../enclave/testdata/cert/server.crt", "../enclave/testdata/cert/server.key"
+	tm, err := Init(enc, 9001, ipcPath, false, true, certFile, keyFile)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

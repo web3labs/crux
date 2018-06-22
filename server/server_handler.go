@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/kevinburke/nacl"
+	"encoding/json"
+	"github.com/blk-io/crux/api"
 )
 
 type Server struct {
@@ -79,6 +82,79 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 	} else {
 		return s.Enclave.RetrieveDefault(&b64Key)
 	}
+}
+
+func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfoResponse, error) {
+	recipients := make(map[[nacl.KeySize]byte]string)
+	for url, key := range in.Receipients{
+		var as [32]byte
+		// couldn't find a better way to reduce a slice to array of fixed length
+		for idx, i := range key{
+			if idx < 32{
+				as[idx] = i
+			} else {
+				break
+			}
+		}
+		recipients[as] = url
+	}
+
+	s.Enclave.UpdatePartyInfoGrpc(in.Url, recipients, in.Parties)
+	encoded := s.Enclave.GetEncodedPartyInfoGrpc()
+	var decodedPartyInfo PartyInfoResponse
+	err := json.Unmarshal(encoded, &decodedPartyInfo)
+	if err != nil{
+		log.Errorf("Unmarshalling failed with %v", err)
+	}
+	return &PartyInfoResponse{Payload: decodedPartyInfo.Payload}, nil
+}
+
+
+func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse, error){
+	sender := sliceToarrNaclKey(in.Ep.Sender)
+	nounce := sliceToarrNaclNonce(in.Ep.Nonce)
+	recipientNounce := sliceToarrNaclNonce(in.Ep.ReciepientNonce)
+	encyptedPayload := api.EncryptedPayload{
+		Sender:sender,
+		CipherText:in.Ep.CipherText,
+		Nonce:nounce,
+		RecipientBoxes:in.Ep.ReciepientBoxes,
+		RecipientNonce:recipientNounce,
+	}
+
+	digestHash, err := s.Enclave.StorePayloadGrpc(encyptedPayload, in.Encoded)
+	if err != nil {
+		log.Fatalf("Unable to store payload, error: %s\n", err)
+	}
+
+	return &PartyInfoResponse{Payload: digestHash}, nil
+}
+
+
+func sliceToarrNaclKey(key []byte) nacl.Key {
+	var as nacl.Key
+	// couldn't find a better way to reduce a slice to array of fixed length
+	for idx, i := range key{
+		if idx < 32{
+			as[idx] = i
+		} else {
+			break
+		}
+	}
+	return as
+}
+
+func sliceToarrNaclNonce(key []byte) nacl.Nonce {
+	var as nacl.Nonce
+	// couldn't find a better way to reduce a slice to array of fixed length
+	for idx, i := range key{
+		if idx < 24{
+			as[idx] = i
+		} else {
+			break
+		}
+	}
+	return as
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

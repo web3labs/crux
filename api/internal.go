@@ -136,33 +136,46 @@ func (s *PartyInfo) GetPartyInfo(grpc bool) {
 		}
 
 		if grpc {
-			var partyInfoReq UpdatePartyInfo
-			err = json.NewDecoder(resp.Body).Decode(&partyInfoReq)
-			resp.Body.Close()
-			if err != nil {
-				log.WithField("url", rawUrl).Errorf(
-					"Unable to read partyInfo response from host, %v", err)
-				break
-			}
-			pi, err := DecodePartyInfo(partyInfoReq.Payload)
-			if err != nil {
-				log.WithField("url", rawUrl).Errorf(
-					"Unable to decode partyInfo response from host, %v", err)
-				break
-			}
-			s.UpdatePartyInfoGrpc(pi.url, pi.recipients, pi.parties)
+			err = s.updatePartyInfoGrpc(resp, rawUrl)
 		} else {
-			var encoded []byte
-			encoded, err = ioutil.ReadAll(resp.Body)
-			resp.Body.Close()
-			if err != nil {
-				log.WithField("url", rawUrl).Errorf(
-					"Unable to read partyInfo response from host, %v", err)
-				break
-			}
-			s.UpdatePartyInfo(encoded)
+			err = s.updatePartyInfo(resp, rawUrl)
+		}
+		if err != nil {
+			break
 		}
 	}
+}
+
+func (s *PartyInfo) updatePartyInfoGrpc(resp *http.Response, rawUrl string) error {
+	var partyInfoReq UpdatePartyInfo
+	err := json.NewDecoder(resp.Body).Decode(&partyInfoReq)
+	resp.Body.Close()
+	if err != nil {
+		log.WithField("url", rawUrl).Errorf(
+			"Unable to read partyInfo response from host, %v", err)
+		return err
+	}
+	pi, err := DecodePartyInfo(partyInfoReq.Payload)
+	if err != nil {
+		log.WithField("url", rawUrl).Errorf(
+			"Unable to decode partyInfo response from host, %v", err)
+		return err
+	}
+	s.UpdatePartyInfoGrpc(pi.url, pi.recipients, pi.parties)
+	return nil
+}
+
+func (s *PartyInfo) updatePartyInfo(resp *http.Response, rawUrl string) error {
+	var encoded []byte
+	encoded, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		log.WithField("url", rawUrl).Errorf(
+			"Unable to read partyInfo response from host, %v", err)
+		return err
+	}
+	s.UpdatePartyInfo(encoded)
+	return nil
 }
 
 func getEncoded(grpc bool, encodedPartyInfo []byte) []byte{

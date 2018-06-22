@@ -34,6 +34,9 @@ func (s* MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte)
 func (s* MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
+func (s* MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
+	return encoded, nil
+}
 
 func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
@@ -261,12 +264,10 @@ func TestPush(t *testing.T) {
 	var recipients [][]byte
 
 	encoded := api.EncodePayloadWithRecipients(epl, recipients)
-
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	rr := httptest.NewRecorder()
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 

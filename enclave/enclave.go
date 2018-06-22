@@ -276,6 +276,10 @@ func (s *SecureEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	return s.storePayload(epl, encoded)
 }
 
+func (s *SecureEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
+	return s.storePayload(epl, encoded)
+}
+
 func (s *SecureEnclave) storePayload(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
 	digestHash := utils.Sha3Hash(epl.CipherText)
 	err := s.Db.Write(&digestHash, &encoded)

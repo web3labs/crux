@@ -30,4 +30,11 @@ service Client {
             body: "*"
         };
     }
+
+    rpc Push(PushPayload) returns (PartyInfoResponse) {
+        option (google.api.http) = {
+            post: "/push"
+            body: "*"
+        };
+    }
 }

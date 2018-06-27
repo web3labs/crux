@@ -433,7 +433,7 @@ func (s *SecureEnclave) GetEncodedPartyInfo() []byte {
 
 func (s *SecureEnclave) GetEncodedPartyInfoGrpc() []byte {
 	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload: api.EncodePartyInfo(s.PartyInfo)})
-	if err != nil{
+	if err != nil {
 		log.Errorf("Marshalling failed %v", err)
 	}
 	return encoded

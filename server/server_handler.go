@@ -88,14 +88,7 @@ func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfo
 	recipients := make(map[[nacl.KeySize]byte]string)
 	for url, key := range in.Receipients{
 		var as [32]byte
-		// couldn't find a better way to reduce a slice to array of fixed length
-		for idx, i := range key{
-			if idx < 32{
-				as[idx] = i
-			} else {
-				break
-			}
-		}
+		copy(as[:], key)
 		recipients[as] = url
 	}
 
@@ -111,15 +104,18 @@ func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfo
 
 
 func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse, error){
-	sender := sliceToarrNaclKey(in.Ep.Sender)
-	nounce := sliceToarrNaclNonce(in.Ep.Nonce)
-	recipientNounce := sliceToarrNaclNonce(in.Ep.ReciepientNonce)
+	var sender *[nacl.KeySize]byte
+	var nonce, recipientNonce *[nacl.NonceSize]byte
+	copy(sender[:], in.Ep.Sender)
+	copy(nonce[:], in.Ep.Nonce)
+	copy(recipientNonce[:], in.Ep.ReciepientNonce)
+
 	encyptedPayload := api.EncryptedPayload{
 		Sender:sender,
 		CipherText:in.Ep.CipherText,
-		Nonce:nounce,
+		Nonce:nonce,
 		RecipientBoxes:in.Ep.ReciepientBoxes,
-		RecipientNonce:recipientNounce,
+		RecipientNonce:recipientNonce,
 	}
 
 	digestHash, err := s.Enclave.StorePayloadGrpc(encyptedPayload, in.Encoded)
@@ -128,33 +124,6 @@ func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse,
 	}
 
 	return &PartyInfoResponse{Payload: digestHash}, nil
-}
-
-
-func sliceToarrNaclKey(key []byte) nacl.Key {
-	var as nacl.Key
-	// couldn't find a better way to reduce a slice to array of fixed length
-	for idx, i := range key{
-		if idx < 32{
-			as[idx] = i
-		} else {
-			break
-		}
-	}
-	return as
-}
-
-func sliceToarrNaclNonce(key []byte) nacl.Nonce {
-	var as nacl.Nonce
-	// couldn't find a better way to reduce a slice to array of fixed length
-	for idx, i := range key{
-		if idx < 24{
-			as[idx] = i
-		} else {
-			break
-		}
-	}
-	return as
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

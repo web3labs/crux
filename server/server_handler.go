@@ -6,6 +6,9 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"github.com/kevinburke/nacl"
+	"encoding/json"
+	"github.com/blk-io/crux/api"
 )
 
 type Server struct {
@@ -79,6 +82,48 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 	} else {
 		return s.Enclave.RetrieveDefault(&b64Key)
 	}
+}
+
+func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfoResponse, error) {
+	recipients := make(map[[nacl.KeySize]byte]string)
+	for url, key := range in.Receipients{
+		var as [32]byte
+		copy(as[:], key)
+		recipients[as] = url
+	}
+
+	s.Enclave.UpdatePartyInfoGrpc(in.Url, recipients, in.Parties)
+	encoded := s.Enclave.GetEncodedPartyInfoGrpc()
+	var decodedPartyInfo PartyInfoResponse
+	err := json.Unmarshal(encoded, &decodedPartyInfo)
+	if err != nil{
+		log.Errorf("Unmarshalling failed with %v", err)
+	}
+	return &PartyInfoResponse{Payload: decodedPartyInfo.Payload}, nil
+}
+
+
+func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse, error){
+	var sender *[nacl.KeySize]byte
+	var nonce, recipientNonce *[nacl.NonceSize]byte
+	copy(sender[:], in.Ep.Sender)
+	copy(nonce[:], in.Ep.Nonce)
+	copy(recipientNonce[:], in.Ep.ReciepientNonce)
+
+	encyptedPayload := api.EncryptedPayload{
+		Sender:sender,
+		CipherText:in.Ep.CipherText,
+		Nonce:nonce,
+		RecipientBoxes:in.Ep.ReciepientBoxes,
+		RecipientNonce:recipientNonce,
+	}
+
+	digestHash, err := s.Enclave.StorePayloadGrpc(encyptedPayload, in.Encoded)
+	if err != nil {
+		log.Fatalf("Unable to store payload, error: %s\n", err)
+	}
+
+	return &PartyInfoResponse{Payload: digestHash}, nil
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

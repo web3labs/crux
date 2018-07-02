@@ -56,6 +56,7 @@ func InitFlags() {
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
 	flag.Bool(UseGRPC, false, "Use gRPC server")
+	flag.Bool(Tls, false, "Use TLS to secure HTTP communications")
 	flag.String(TlsServerCert, "", "The server certificate to be used")
 	flag.String(TlsServerKey, "", "The server private key")
 

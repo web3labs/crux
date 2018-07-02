@@ -24,3 +24,22 @@ message ReceiveRequest{
 message ReceiveResponse{
     bytes payload = 1;
 }
+message PartyInfo{
+    string url = 1;
+    map<string, bytes> receipients = 2;
+    map<string, bool> parties = 3;
+}
+message PartyInfoResponse{
+    bytes payload = 1;
+}
+message EncryptedPayload{
+    bytes sender = 1;
+    bytes cipherText = 2;
+    bytes nonce = 3;
+    repeated bytes reciepientBoxes = 4;
+    bytes reciepientNonce = 5;
+}
+message PushPayload{
+    EncryptedPayload ep = 1;
+    bytes encoded = 2;
+}

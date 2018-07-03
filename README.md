@@ -39,6 +39,10 @@ Usage of ./bin/crux:
       --url string             The URL to advertise to other nodes (reachable by them)
       --verbosity int          Verbosity level of logs (default 1)
       --workdir string         The folder to put stuff in (default: .) (default ".")
+      --grpc                   Use protobuf + gRPC for communication between nodes
+      --tls                    Use TLS to secure HTTP communications
+      --tlsservercert          TLS server certificate
+      --tlsserverkey           TLS server key
 ``` 
 
 ## Generating keys

@@ -178,9 +178,9 @@ func TestSendRaw(t *testing.T) {
 	headers[hFrom] = []string{sender}
 	headers[hTo] = []string{receiver}
 
-	// Uncomment the below for Quorum v2.0.2 onwards
-	//runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
-	runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
+	runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
+	// Uncomment the below for Quorum v2.0.1 or below
+	//runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
 }
 
 func TestReceive(t *testing.T) {

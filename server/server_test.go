@@ -17,6 +17,7 @@ import (
 	"path"
 	"io/ioutil"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -149,10 +150,14 @@ func TestGRPCSend(t *testing.T) {
 	}
 	expected := SendResponse{Key: payload}
 
-	ipcPath := InitgRPCServer(t, true, 9005)
+	freePort, err := GetFreePort()
+	if err != nil {
+		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+	}
+	ipcPath := InitgRPCServer(t, true, freePort)
 
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	conn, err = grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
@@ -210,10 +215,13 @@ func TestGRPCReceive(t *testing.T) {
 		},
 	}
 	expected := ReceiveResponse{Payload: payload}
-
-	ipcPath := InitgRPCServer(t, true, 9010)
+	freePort, err := GetFreePort()
+	if err != nil {
+		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+	}
+	ipcPath := InitgRPCServer(t, true, freePort)
 	var conn *grpc.ClientConn
-	conn, err := grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	conn, err = grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
 	if err != nil {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}

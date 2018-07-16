@@ -41,7 +41,11 @@ func (tm *TransactionManager) startRpcServer(port int, ipcPath string, tls bool,
 }
 
 func (tm *TransactionManager) startRestServer(port int) error {
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port-1)
+	freePort, err := GetFreePort()
+	if err != nil {
+		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+	}
+	grpcAddress := fmt.Sprintf("%s:%d", "localhost", freePort)
 	lis, err := net.Listen("tcp", grpcAddress)
 
 	s := Server{Enclave : tm.Enclave}

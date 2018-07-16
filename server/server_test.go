@@ -474,7 +474,7 @@ func TestPartyInfo(t *testing.T) {
 
 func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 	encodedPartyInfo := api.EncodePartyInfo(pi)
-	encoded, err := json.Marshal(api.UpdatePartyInfo{Payload:encodedPartyInfo})
+	encoded, err := json.Marshal(api.PartyInfoResponse{Payload:encodedPartyInfo})
 	if err != nil {
 		t.Errorf("Marshalling failed %v", err)
 	}

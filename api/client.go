@@ -46,9 +46,14 @@ type ResendRequest struct {
 }
 
 type UpdatePartyInfo struct {
-	Payload []byte `json:"payload"`
+	Url         string            `json:"url"`
+	Recipients  map[string][]byte `json:"recipients"`
+	Parties     map[string]bool	  `json:"parties"`
 }
 
+type PartyInfoResponse struct {
+	Payload []byte `json:"payload"`
+}
 type PrivateKeyBytes struct {
 	Bytes  string  `json:"bytes"`
 }

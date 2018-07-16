@@ -111,7 +111,7 @@ func (s *PartyInfo) GetPartyInfo(grpc bool) {
 		}
 
 		var req *http.Request
-		encoded := getEncoded(grpc, encodedPartyInfo)
+		encoded := s.getEncoded(grpc, encodedPartyInfo)
 		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encoded))
 
 		if err != nil {
@@ -147,7 +147,7 @@ func (s *PartyInfo) GetPartyInfo(grpc bool) {
 }
 
 func (s *PartyInfo) updatePartyInfoGrpc(resp *http.Response, rawUrl string) error {
-	var partyInfoReq UpdatePartyInfo
+	var partyInfoReq PartyInfoResponse
 	err := json.NewDecoder(resp.Body).Decode(&partyInfoReq)
 	resp.Body.Close()
 	if err != nil {
@@ -178,9 +178,13 @@ func (s *PartyInfo) updatePartyInfo(resp *http.Response, rawUrl string) error {
 	return nil
 }
 
-func getEncoded(grpc bool, encodedPartyInfo []byte) []byte{
+func (s *PartyInfo) getEncoded(grpc bool, encodedPartyInfo []byte) []byte{
 	if grpc{
-		e, err := json.Marshal(UpdatePartyInfo{encodedPartyInfo})
+		recipients := make(map[string][]byte)
+		for key, url := range s.recipients{
+			recipients[url] = key[:]
+		}
+		e, err := json.Marshal(UpdatePartyInfo{s.url, recipients, s.parties})
 		if err != nil{
 			log.Errorf("Marshalling failed %v", err)
 			return nil

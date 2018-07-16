@@ -210,12 +210,12 @@ func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Uncomment the below for Quorum v2.0.2 onwards
+	// Uncomment the below for Quorum v2.0.1 or below
 	// see https://github.com/jpmorganchase/quorum/commit/ee498061b5a74bf1f3290139a53840345fa038cb#diff-63fbbd6b2c0487b8cd4445e881822cdd
-	// encodedKey := base64.StdEncoding.EncodeToString(key)
-	// fmt.Fprint(w, encodedKey)
-	// Then delete this line
-	w.Write(key)
+	//w.Write(key)
+	// Then delete the below lines
+	encodedKey := base64.StdEncoding.EncodeToString(key)
+	fmt.Fprint(w, encodedKey)
 }
 
 func (s *TransactionManager) processSend(

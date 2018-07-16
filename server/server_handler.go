@@ -86,12 +86,11 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 
 func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfoResponse, error) {
 	recipients := make(map[[nacl.KeySize]byte]string)
-	for url, key := range in.Receipients{
+	for url, key := range in.Recipients{
 		var as [32]byte
 		copy(as[:], key)
 		recipients[as] = url
 	}
-
 	s.Enclave.UpdatePartyInfoGrpc(in.Url, recipients, in.Parties)
 	encoded := s.Enclave.GetEncodedPartyInfoGrpc()
 	var decodedPartyInfo PartyInfoResponse

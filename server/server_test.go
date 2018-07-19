@@ -12,6 +12,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
+	"github.com/blk-io/crux/protofiles"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"path"
@@ -134,7 +135,7 @@ func TestSend(t *testing.T) {
 }
 
 func TestGRPCSend(t *testing.T) {
-	sendReqs := []SendRequest{
+	sendReqs := []protofiles.SendRequest{
 		{
 			Payload: payload,
 			From: sender,
@@ -148,7 +149,7 @@ func TestGRPCSend(t *testing.T) {
 			Payload: payload,
 		},
 	}
-	expected := SendResponse{Key: payload}
+	expected := protofiles.SendResponse{Key: payload}
 
 	freePort, err := GetFreePort()
 	if err != nil {
@@ -162,14 +163,14 @@ func TestGRPCSend(t *testing.T) {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
 	defer conn.Close()
-	c := NewClientClient(conn)
+	c := protofiles.NewClientClient(conn)
 
 	for _, sendReq := range sendReqs {
 		resp, err:= c.Send(context.Background(), &sendReq)
 		if err != nil {
 			t.Fatalf("gRPC send failed with %s", err)
 		}
-		response := SendResponse{Key:resp.Key}
+		response := protofiles.SendResponse{Key:resp.Key}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}
@@ -208,13 +209,13 @@ func TestReceive(t *testing.T) {
 }
 
 func TestGRPCReceive(t *testing.T) {
-	receiveReqs := []ReceiveRequest{
+	receiveReqs := []protofiles.ReceiveRequest{
 		{
 			Key: payload,
 			To: receiver,
 		},
 	}
-	expected := ReceiveResponse{Payload: payload}
+	expected := protofiles.ReceiveResponse{Payload: payload}
 	freePort, err := GetFreePort()
 	if err != nil {
 		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
@@ -226,14 +227,14 @@ func TestGRPCReceive(t *testing.T) {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
 	defer conn.Close()
-	c := NewClientClient(conn)
+	c := protofiles.NewClientClient(conn)
 
 	for _, receiveReq := range receiveReqs {
 		resp, err:= c.Receive(context.Background(), &receiveReq)
 		if err != nil {
 			t.Fatalf("gRPC receive failed with %s", err)
 		}
-		response := ReceiveResponse{Payload:resp.Payload}
+		response := protofiles.ReceiveResponse{Payload:resp.Payload}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}
@@ -472,7 +473,7 @@ func TestPartyInfo(t *testing.T) {
 		api.InitPartyInfo(
 			"http://localhost:8000",
 			[]string{"http://localhost:8001"},
-			http.DefaultClient),
+			http.DefaultClient, ""),
 	}
 
 	for _, pi := range partyInfos {
@@ -510,7 +511,7 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 
 func InitgRPCServer(t *testing.T, grpc bool, port int) (string) {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, false, "", "")
+	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, -1,false, "", "")
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
@@ -547,14 +548,14 @@ func TestInit(t *testing.T) {
 		key,
 		http.DefaultClient)
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, "")
 
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
 	if err != nil {
 		t.Error(err)
 	}
 	certFile, keyFile := "../enclave/testdata/cert/server.crt", "../enclave/testdata/cert/server.key"
-	tm, err := Init(enc, 9001, ipcPath, false, true, certFile, keyFile)
+	tm, err := Init(enc, 9001,  ipcPath, false, -1, true, certFile, keyFile)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

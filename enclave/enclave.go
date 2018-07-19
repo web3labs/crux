@@ -30,6 +30,7 @@ type SecureEnclave struct {
 	PartyInfo  api.PartyInfo  // Details of all other nodes (or parties) on the network
 	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // Maps sender -> recipient -> shared key
 	client     utils.HttpClient  // The underlying HTTP client used to propagate requests
+	grpc	   string
 }
 
 // Init creates a new instance of the SecureEnclave.
@@ -37,7 +38,7 @@ func Init(
 	db storage.DataStore,
 	pubKeyFiles, privKeyFiles []string,
 	pi api.PartyInfo,
-	client utils.HttpClient) *SecureEnclave {
+	client utils.HttpClient, grpc string) *SecureEnclave {
 
 	// Key format:
 	// BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=
@@ -59,6 +60,7 @@ func Init(
 		PrivKeys: privKeys,
 		PartyInfo: pi,
 		client: client,
+		grpc: grpc,
 	}
 
 	// We use shared keys for encrypting data. The keys between a specific sender and recipient are
@@ -233,7 +235,11 @@ func (s *SecureEnclave) publishPayload(epl api.EncryptedPayload, recipient []byt
 
 	if url, ok := s.PartyInfo.GetRecipient(key); ok {
 		encoded := api.EncodePayloadWithRecipients(epl, [][]byte{})
-		api.Push(encoded, url, s.client)
+		if s.grpc != "" {
+			api.PushGrpc(encoded, url, epl)
+		} else {
+			api.Push(encoded, url, s.client)
+		}
 	} else {
 		log.WithField("recipientKey", hex.EncodeToString(recipient)).Error("Unable to resolve host")
 	}

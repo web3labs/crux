@@ -9,26 +9,27 @@ import (
 	"github.com/kevinburke/nacl"
 	"encoding/json"
 	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/protofiles"
 )
 
 type Server struct {
 	Enclave Enclave
 }
 
-func (s *Server) Version(ctx context.Context, in *ApiVersion) (*ApiVersion, error) {
-	return &ApiVersion{Version:apiVersion}, nil
+func (s *Server) Version(ctx context.Context, in *protofiles.ApiVersion) (*protofiles.ApiVersion, error) {
+	return &protofiles.ApiVersion{Version:apiVersion}, nil
 }
 
-func (s *Server) Upcheck(ctx context.Context, in *UpCheckResponse) (*UpCheckResponse, error) {
-	return &UpCheckResponse{Message:upCheckResponse}, nil
+func (s *Server) Upcheck(ctx context.Context, in *protofiles.UpCheckResponse) (*protofiles.UpCheckResponse, error) {
+	return &protofiles.UpCheckResponse{Message:upCheckResponse}, nil
 }
-func (s *Server) Send(ctx context.Context, in *SendRequest) (*SendResponse, error) {
+func (s *Server) Send(ctx context.Context, in *protofiles.SendRequest) (*protofiles.SendResponse, error) {
 	key, err := s.processSend(in.GetFrom(), in.GetTo(), &in.Payload)
-	var sendResp SendResponse
+	var sendResp protofiles.SendResponse
 	if err != nil {
 		log.Error(err)
 	} else {
-		sendResp = SendResponse{Key: key}
+		sendResp = protofiles.SendResponse{Key: key}
 	}
 	return &sendResp, err
 }
@@ -60,13 +61,13 @@ func (s *Server) processSend(b64from string, b64recipients []string, payload *[]
 	return s.Enclave.Store(payload, sender, recipients)
 }
 
-func (s *Server) Receive(ctx context.Context, in *ReceiveRequest) (*ReceiveResponse, error) {
+func (s *Server) Receive(ctx context.Context, in *protofiles.ReceiveRequest) (*protofiles.ReceiveResponse, error) {
 	payload, err := s.processReceive(in.Key, in.To)
-	var receiveResp ReceiveResponse
+	var receiveResp protofiles.ReceiveResponse
 	if err != nil {
 		log.Error(err)
 	} else {
-		receiveResp = ReceiveResponse{Payload: payload}
+		receiveResp = protofiles.ReceiveResponse{Payload: payload}
 	}
 	return &receiveResp, err
 }
@@ -84,7 +85,7 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 	}
 }
 
-func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfoResponse, error) {
+func (s *Server) UpdatePartyInfo(ctx context.Context, in *protofiles.PartyInfo) (*protofiles.PartyInfoResponse, error) {
 	recipients := make(map[[nacl.KeySize]byte]string)
 	for url, key := range in.Recipients{
 		var as [32]byte
@@ -93,21 +94,22 @@ func (s *Server) UpdatePartyInfo(ctx context.Context, in *PartyInfo) (*PartyInfo
 	}
 	s.Enclave.UpdatePartyInfoGrpc(in.Url, recipients, in.Parties)
 	encoded := s.Enclave.GetEncodedPartyInfoGrpc()
-	var decodedPartyInfo PartyInfoResponse
+	var decodedPartyInfo protofiles.PartyInfoResponse
 	err := json.Unmarshal(encoded, &decodedPartyInfo)
 	if err != nil{
 		log.Errorf("Unmarshalling failed with %v", err)
 	}
-	return &PartyInfoResponse{Payload: decodedPartyInfo.Payload}, nil
+	return &protofiles.PartyInfoResponse{Payload: decodedPartyInfo.Payload}, nil
 }
 
 
-func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse, error){
-	var sender *[nacl.KeySize]byte
-	var nonce, recipientNonce *[nacl.NonceSize]byte
-	copy(sender[:], in.Ep.Sender)
-	copy(nonce[:], in.Ep.Nonce)
-	copy(recipientNonce[:], in.Ep.ReciepientNonce)
+func (s *Server) Push(ctx context.Context, in *protofiles.PushPayload) (*protofiles.PartyInfoResponse, error) {
+	sender := new([nacl.KeySize]byte)
+	nonce := new([nacl.NonceSize]byte)
+	recipientNonce := new([nacl.NonceSize]byte)
+	copy((*sender)[:], in.Ep.Sender)
+	copy((*nonce)[:], in.Ep.Nonce)
+	copy((*recipientNonce)[:], in.Ep.ReciepientNonce)
 
 	encyptedPayload := api.EncryptedPayload{
 		Sender:sender,
@@ -122,7 +124,7 @@ func (s *Server) Push(ctx context.Context, in *PushPayload) (*PartyInfoResponse,
 		log.Fatalf("Unable to store payload, error: %s\n", err)
 	}
 
-	return &PartyInfoResponse{Payload: digestHash}, nil
+	return &protofiles.PartyInfoResponse{Payload: digestHash}, nil
 }
 
 func decodeErrorGRPC(name string, value string, err error) {

@@ -10,16 +10,17 @@ import (
 	"github.com/blk-io/crux/utils"
 	"net"
 	"google.golang.org/grpc/credentials"
+	"github.com/blk-io/crux/protofiles"
 )
 
-func (tm *TransactionManager) startRpcServer(port int, ipcPath string, tls bool, certFile, keyFile string) error {
+func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {
 	lis, err := utils.CreateIpcSocket(ipcPath)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := Server{Enclave : tm.Enclave}
 	grpcServer := grpc.NewServer()
-	RegisterClientServer(grpcServer, &s)
+	protofiles.RegisterClientServer(grpcServer, &s)
 	go func() {
 		log.Fatal(grpcServer.Serve(lis))
 	}()
@@ -31,6 +32,13 @@ func (tm *TransactionManager) startRpcServer(port int, ipcPath string, tls bool,
 		} else {
 			err = tm.startRestServer(port)
 		}
+		if grpcJsonPort != -1 {
+			if tls {
+				err = tm.startJsonServerTLS(port, grpcJsonPort, certFile, keyFile, certFile)
+			} else {
+				err = tm.startJsonServer(port, grpcJsonPort)
+			}
+		}
 		if err != nil {
 			log.Fatalf("failed to start gRPC REST server: %s", err)
 		}
@@ -40,42 +48,59 @@ func (tm *TransactionManager) startRpcServer(port int, ipcPath string, tls bool,
 	return err
 }
 
-func (tm *TransactionManager) startRestServer(port int) error {
-	freePort, err := GetFreePort()
-	if err != nil {
-		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
-	}
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", freePort)
-	lis, err := net.Listen("tcp", grpcAddress)
-
-	s := Server{Enclave : tm.Enclave}
-	grpcServer := grpc.NewServer()
-	RegisterClientServer(grpcServer, &s)
-	go func() {
-		log.Fatal(grpcServer.Serve(lis))
-	}()
-
-	address := fmt.Sprintf("%s:%d", "localhost", port)
+func (tm *TransactionManager) startJsonServer(port int, grpcJsonPort int) error {
+	address := fmt.Sprintf("%s:%d", "localhost", grpcJsonPort)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err = RegisterClientHandlerFromEndpoint(ctx, mux, grpcAddress, opts)
+	err := protofiles.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), opts)
 	if err != nil {
-		return fmt.Errorf("could not register service Ping: %s", err)
+		return fmt.Errorf("could not register service: %s", err)
 	}
 	log.Printf("starting HTTP/1.1 REST server on %s", address)
-	http.ListenAndServe(address, mux)
+	err = http.ListenAndServe(address, mux)
+	if err != nil {
+		return fmt.Errorf("could not listen on %s due to: %s", address, err)
+	}
 	return nil
 }
 
-func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile, ca string) error {
-	freePort, err := GetFreePort()
+func (tm *TransactionManager) startRestServer(port int) error {
+	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port)
+	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
-		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+		panic(err)
 	}
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", freePort)
+	s := Server{Enclave : tm.Enclave}
+	grpcServer := grpc.NewServer()
+	protofiles.RegisterClientServer(grpcServer, &s)
+	go func() {
+		log.Fatal(grpcServer.Serve(lis))
+	}()
+	return nil
+}
+
+func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, certFile, keyFile,ca string) error {
+	address := fmt.Sprintf("%s:%d", "localhost", grpcJsonPort)
+	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	mux := runtime.NewServeMux()
+	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
+	err = protofiles.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), []grpc.DialOption{grpc.WithTransportCredentials(creds)})
+	if err != nil {
+		log.Fatalf("could not register service Ping: %s", err)
+		return err
+	}
+	http.ListenAndServe(address, mux)
+	log.Printf("started HTTPS REST server on %s", address)
+	return nil
+}
+
+func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile,ca string) error {
+	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port)
 	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		log.Fatalf("failed to start gRPC REST server: %s", err)
@@ -87,23 +112,10 @@ func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile, ca
 		log.Fatalf("failed to load credentials : %v", err)
 	}
 	grpcServer := grpc.NewServer(opts...)
-	RegisterClientServer(grpcServer, &s)
+	protofiles.RegisterClientServer(grpcServer, &s)
 	go func() {
 		log.Fatal(grpcServer.Serve(lis))
 	}()
-
-	address := fmt.Sprintf("%s:%d", "localhost", port)
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-	mux := runtime.NewServeMux()
-	err = RegisterClientHandlerFromEndpoint(ctx, mux, grpcAddress, []grpc.DialOption{grpc.WithTransportCredentials(creds)})
-	if err != nil {
-		log.Fatalf("could not register service Ping: %s", err)
-		return err
-	}
-	http.ListenAndServeTLS(address, certFile, keyFile, mux)
-	log.Printf("started HTTPS REST server on %s", address)
 	return nil
 }
 

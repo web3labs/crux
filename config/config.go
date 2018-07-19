@@ -25,6 +25,7 @@ const (
 
 	BerkeleyDb = "berkeleydb"
 	UseGRPC = "grpc"
+	GrpcJsonPort = "grpcport"
 
 	Tls = "tls"
 	TlsServerChain = "tlsserverchain"
@@ -59,6 +60,7 @@ func InitFlags() {
 	flag.Bool(Tls, false, "Use TLS to secure HTTP communications")
 	flag.String(TlsServerCert, "", "The server certificate to be used")
 	flag.String(TlsServerKey, "", "The server private key")
+	flag.Int(GrpcJsonPort, -1, "The local port to listen on for JSON extensions of gRPC")
 
 	// storage not currently supported as we use LevelDB
 

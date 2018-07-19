@@ -14,16 +14,16 @@ all: build
 protofiles: proto grpc
 
 proto:
-	$Q protoc -I server/ \
+	$Q protoc -I protofiles/ \
 		-I $(GOPATH)/../vendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		--go_out=plugins=grpc:server \
-		server/*.proto
+		--go_out=plugins=grpc:protofiles \
+		protofiles/*.proto
 
 grpc:
-	$Q protoc -I server/ \
+	$Q protoc -I protofiles/ \
 		-I $(GOPATH)/../vendor/github.com/grpc-ecosystem/grpc-gateway/third_party/googleapis \
-		--grpc-gateway_out=logtostderr=true:server \
-		server/grpc.proto
+		--grpc-gateway_out=logtostderr=true:protofiles \
+		protofiles/grpc.proto
 
 
 .PHONY: build

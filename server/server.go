@@ -75,12 +75,11 @@ func requestLogger(handler http.Handler) http.Handler {
 }
 
 // Init initializes a new TransactionManager instance.
-func Init(enc Enclave, port int, ipcPath string, grpc bool, tls bool, certFile, keyFile string) (TransactionManager, error) {
+func Init(enc Enclave, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 	var err error
-
 	if grpc == true {
-		err = tm.startRpcServer(port, ipcPath, tls, certFile, keyFile)
+		err = tm.startRpcServer(port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
 
 	} else {
 		err = tm.startHttpserver(port, ipcPath, tls, certFile, keyFile)

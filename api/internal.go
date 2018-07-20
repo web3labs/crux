@@ -13,6 +13,10 @@ import (
 	"encoding/json"
 	"net/http/httputil"
 	"fmt"
+	"github.com/blk-io/crux/protofiles"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"net/url"
 )
 
 // EncryptedPayload is the struct used for storing all data associated with an encrypted
@@ -31,6 +35,7 @@ type PartyInfo struct {
 	recipients map[[nacl.KeySize]byte]string  // public key -> URL
 	parties    map[string]bool  // Node (or party) URLs
 	client     utils.HttpClient
+	grpc 	   bool
 }
 
 // GetRecipient retrieves the URL associated with the provided recipient.
@@ -39,12 +44,12 @@ func (s *PartyInfo) GetRecipient(key nacl.Key) (string, bool) {
 	return value, ok
 }
 
-func (s *PartyInfo) GetAllValues() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+func (s *PartyInfo) GetAllValues() (string, map[[nacl.KeySize]byte]string, map[string]bool) {
 	return s.url, s.recipients, s.parties
 }
 
 // InitPartyInfo initializes a new PartyInfo store.
-func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient) PartyInfo {
+func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient, grpc bool) PartyInfo {
 	parties := make(map[string]bool)
 	for _, node := range otherNodes {
 		parties[node] = true
@@ -55,6 +60,7 @@ func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient) 
 		recipients: make(map[[nacl.KeySize]byte]string),
 		parties:    parties,
 		client:     client,
+		grpc:		grpc,
 	}
 }
 
@@ -87,9 +93,51 @@ func (s *PartyInfo) RegisterPublicKeys(pubKeys []nacl.Key) {
 	}
 }
 
+func (s *PartyInfo) GetPartyInfoGrpc() {
+	recipients := make(map[string][]byte)
+	for key, url := range s.recipients{
+		recipients[url] = key[:]
+	}
+	urls := make(map[string]bool)
+	for k, v := range s.parties {
+		urls[k] = v
+	}
+
+	for rawUrl := range urls{
+		if rawUrl == s.url {
+			continue
+		}
+		var completeUrl url.URL
+		url, err := completeUrl.Parse(rawUrl)
+		conn, err := grpc.Dial(url.Host, grpc.WithInsecure())
+		if err != nil {
+			log.Fatalf("Connection to gRPC server failed with error %s", err)
+		}
+		defer conn.Close()
+		cli := protofiles.NewClientClient(conn)
+		if cli == nil{
+			log.Fatalf("Client is not intialised")
+		}
+		party := protofiles.PartyInfo{Url:rawUrl, Recipients:recipients, Parties:s.parties}
+
+		partyInfoResp, err := cli.UpdatePartyInfo(context.Background(), &party)
+		if err != nil {
+			log.Errorf("Error in updating party info %s", err)
+		}
+		err = s.updatePartyInfoGrpc(*partyInfoResp, s.url)
+		if err != nil {
+			log.Errorf("Error: %s", err)
+			break
+		}
+	}
+}
 // GetPartyInfo requests PartyInfo data from all remote nodes this node is aware of. The data
 // provided in each response is applied to this node.
-func (s *PartyInfo) GetPartyInfo(grpc bool) {
+func (s *PartyInfo) GetPartyInfo() {
+	if s.grpc {
+		s.GetPartyInfoGrpc()
+		return
+	}
 	encodedPartyInfo := EncodePartyInfo(*s)
 
 	// First copy our endpoints as we update this map in place
@@ -111,7 +159,7 @@ func (s *PartyInfo) GetPartyInfo(grpc bool) {
 		}
 
 		var req *http.Request
-		encoded := s.getEncoded(grpc, encodedPartyInfo)
+		encoded := s.getEncoded(encodedPartyInfo)
 		req, err = http.NewRequest("POST", endPoint, bytes.NewBuffer(encoded))
 
 		if err != nil {
@@ -135,26 +183,15 @@ func (s *PartyInfo) GetPartyInfo(grpc bool) {
 			continue
 		}
 
-		if grpc {
-			err = s.updatePartyInfoGrpc(resp, rawUrl)
-		} else {
-			err = s.updatePartyInfo(resp, rawUrl)
-		}
+		err = s.updatePartyInfo(resp, rawUrl)
+
 		if err != nil {
 			break
 		}
 	}
 }
 
-func (s *PartyInfo) updatePartyInfoGrpc(resp *http.Response, rawUrl string) error {
-	var partyInfoReq PartyInfoResponse
-	err := json.NewDecoder(resp.Body).Decode(&partyInfoReq)
-	resp.Body.Close()
-	if err != nil {
-		log.WithField("url", rawUrl).Errorf(
-			"Unable to read partyInfo response from host, %v", err)
-		return err
-	}
+func (s *PartyInfo) updatePartyInfoGrpc(partyInfoReq protofiles.PartyInfoResponse, rawUrl string) error {
 	pi, err := DecodePartyInfo(partyInfoReq.Payload)
 	if err != nil {
 		log.WithField("url", rawUrl).Errorf(
@@ -178,8 +215,8 @@ func (s *PartyInfo) updatePartyInfo(resp *http.Response, rawUrl string) error {
 	return nil
 }
 
-func (s *PartyInfo) getEncoded(grpc bool, encodedPartyInfo []byte) []byte{
-	if grpc{
+func (s *PartyInfo) getEncoded(encodedPartyInfo []byte) []byte{
+	if s.grpc {
 		recipients := make(map[string][]byte)
 		for key, url := range s.recipients{
 			recipients[url] = key[:]
@@ -194,9 +231,9 @@ func (s *PartyInfo) getEncoded(grpc bool, encodedPartyInfo []byte) []byte{
 	return encodedPartyInfo[:]
 }
 
-func (s *PartyInfo) PollPartyInfo(grpc bool) {
+func (s *PartyInfo) PollPartyInfo() {
 	time.Sleep(time.Duration(rand.Intn(16)) * time.Second)
-	s.GetPartyInfo(grpc)
+	s.GetPartyInfo()
 
 	ticker := time.NewTicker(2 * time.Minute)
 	quit := make(chan struct{})
@@ -204,7 +241,7 @@ func (s *PartyInfo) PollPartyInfo(grpc bool) {
 		for {
 			select {
 			case <- ticker.C:
-				s.GetPartyInfo(grpc)
+				s.GetPartyInfo()
 			case <- quit:
 				ticker.Stop()
 				return
@@ -259,6 +296,41 @@ func (s *PartyInfo) UpdatePartyInfoGrpc(url string, recipients map[[nacl.KeySize
 	}
 }
 
+func PushGrpc(encoded []byte, path string, epl EncryptedPayload) error {
+	var completeUrl url.URL
+	url, err := completeUrl.Parse(path)
+	conn, err := grpc.Dial(url.Host, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("Connection to gRPC server failed with error %s", err)
+	}
+	defer conn.Close()
+	cli := protofiles.NewClientClient(conn)
+	if cli == nil{
+		log.Fatalf("Client is not intialised")
+	}
+
+	var sender [32]byte
+	var nonce [32]byte
+	var recipientNonce [32]byte
+
+	copy(sender[:], (*epl.Sender)[:])
+	copy(nonce[:], (*epl.Nonce)[:])
+	copy(recipientNonce[:], (*epl.RecipientNonce)[:])
+	encrypt := protofiles.EncryptedPayload{
+		Sender:sender[:],
+		CipherText:epl.CipherText,
+		Nonce:nonce[:],
+		ReciepientNonce:recipientNonce[:],
+		ReciepientBoxes:epl.RecipientBoxes,
+	}
+	pushPayload := protofiles.PushPayload{Ep:&encrypt, Encoded:encoded}
+	_, err = cli.Push(context.Background(), &pushPayload)
+	if err != nil{
+		log.Errorf("Push failed with %s", err)
+		return err
+	}
+	return nil
+}
 // Push is responsible for propagating the encoded payload to the given remote node.
 func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 

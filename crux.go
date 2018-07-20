@@ -64,7 +64,6 @@ func main() {
 	ipcFile := config.GetString(config.Socket)
 	storagePath := path.Join(workDir, dbStorage)
 	ipcPath := path.Join(workDir, ipcFile)
-
 	var db storage.DataStore
 	var err error
 	if config.GetBool(config.BerkeleyDb) {
@@ -83,11 +82,16 @@ func main() {
 	if url == "" {
 		log.Fatalln("URL must be specified")
 	}
-
+	port := config.GetInt(config.Port)
+	if port < 0 {
+		log.Fatalln("Port must be specified")
+	}
 	httpClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
-	pi := api.InitPartyInfo(url, otherNodes, httpClient)
+	grpc := config.GetBool(config.UseGRPC)
+
+	pi := api.InitPartyInfo(url, otherNodes, httpClient, grpc)
 
 	privKeyFiles := config.GetStringSlice(config.PrivateKeys)
 	pubKeyFiles := config.GetStringSlice(config.PublicKeys)
@@ -108,16 +112,10 @@ func main() {
 		pubKeyFiles[i] = path.Join(workDir, keyFile)
 	}
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, grpc)
 
 	pi.RegisterPublicKeys(enc.PubKeys)
 
-	port := config.GetInt(config.Port)
-	if port < 0 {
-		log.Fatalln("Port must be specified")
-	}
-
-	grpc := config.GetBool(config.UseGRPC)
 	tls := config.GetBool(config.Tls)
 	var tlsCertFile, tlsKeyFile string
 	if tls {
@@ -131,12 +129,13 @@ func main() {
 		tlsCertFile = path.Join(workDir, servCert)
 		tlsKeyFile = path.Join(workDir, servKey)
 	}
-	_, err = server.Init(enc, port, ipcPath, grpc, tls, tlsCertFile, tlsKeyFile)
+	grpcJsonport := config.GetInt(config.GrpcJsonPort)
+	_, err = server.Init(enc, port, ipcPath, grpc, grpcJsonport, tls, tlsCertFile, tlsKeyFile)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}
 
-	pi.PollPartyInfo(grpc)
+	pi.PollPartyInfo()
 
 	select {}
 }

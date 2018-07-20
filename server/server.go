@@ -78,7 +78,6 @@ func requestLogger(handler http.Handler) http.Handler {
 func Init(enc Enclave, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave : enc}
 	var err error
-//err = tm.startRestServer(port)
 	if grpc == true {
 		err = tm.startRpcServer(port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
 

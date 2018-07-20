@@ -58,7 +58,7 @@ func initEnclave(
 		[]string{"testdata/key.pub"},
 		[]string{"testdata/key"},
 		pi,
-		client, "")
+		client, false)
 }
 
 func initDefaultEnclave(t *testing.T,
@@ -68,7 +68,7 @@ func initDefaultEnclave(t *testing.T,
 	client = &MockClient{}
 	pi := api.InitPartyInfo(
 		"http://localhost:8000",
-		[]string{"http://localhost:8001"}, client, "")
+		[]string{"http://localhost:8001"}, client, false)
 
 	return initEnclave(t, dbPath, pi, client)
 }
@@ -146,7 +146,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 		[]string{"testdata/rcpt1.pub"},
 		[]string{"testdata/rcpt1"},
 		pi,
-		client, "")
+		client, false)
 
 	var digest2 []byte
 	digest2, err = enc2.StorePayload(propagatedPl)

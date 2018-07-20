@@ -473,7 +473,7 @@ func TestPartyInfo(t *testing.T) {
 		api.InitPartyInfo(
 			"http://localhost:8000",
 			[]string{"http://localhost:8001"},
-			http.DefaultClient, ""),
+			http.DefaultClient, false),
 	}
 
 	for _, pi := range partyInfos {
@@ -548,7 +548,7 @@ func TestInit(t *testing.T) {
 		key,
 		http.DefaultClient)
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, "")
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, false)
 
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
 	if err != nil {

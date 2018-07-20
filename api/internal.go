@@ -35,7 +35,7 @@ type PartyInfo struct {
 	recipients map[[nacl.KeySize]byte]string  // public key -> URL
 	parties    map[string]bool  // Node (or party) URLs
 	client     utils.HttpClient
-	grpc string
+	grpc 	   bool
 }
 
 // GetRecipient retrieves the URL associated with the provided recipient.
@@ -49,7 +49,7 @@ func (s *PartyInfo) GetAllValues() (string, map[[nacl.KeySize]byte]string, map[s
 }
 
 // InitPartyInfo initializes a new PartyInfo store.
-func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient, grpc string) PartyInfo {
+func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient, grpc bool) PartyInfo {
 	parties := make(map[string]bool)
 	for _, node := range otherNodes {
 		parties[node] = true
@@ -134,7 +134,7 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 // GetPartyInfo requests PartyInfo data from all remote nodes this node is aware of. The data
 // provided in each response is applied to this node.
 func (s *PartyInfo) GetPartyInfo() {
-	if s.grpc != "" {
+	if s.grpc {
 		s.GetPartyInfoGrpc()
 		return
 	}
@@ -216,7 +216,7 @@ func (s *PartyInfo) updatePartyInfo(resp *http.Response, rawUrl string) error {
 }
 
 func (s *PartyInfo) getEncoded(encodedPartyInfo []byte) []byte{
-	if s.grpc != "" {
+	if s.grpc {
 		recipients := make(map[string][]byte)
 		for key, url := range s.recipients{
 			recipients[url] = key[:]

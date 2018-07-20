@@ -12,7 +12,6 @@ import (
 	"github.com/blk-io/crux/storage"
 	log "github.com/sirupsen/logrus"
 	"time"
-	"fmt"
 )
 
 func main() {
@@ -91,11 +90,8 @@ func main() {
 		Timeout: time.Second * 10,
 	}
 	grpc := config.GetBool(config.UseGRPC)
-	grpcIpcPath := ""
-	if grpc {
-		grpcIpcPath = fmt.Sprintf("localhost:%d", port)
-	}
-	pi := api.InitPartyInfo(url, otherNodes, httpClient, grpcIpcPath)
+
+	pi := api.InitPartyInfo(url, otherNodes, httpClient, grpc)
 
 	privKeyFiles := config.GetStringSlice(config.PrivateKeys)
 	pubKeyFiles := config.GetStringSlice(config.PublicKeys)
@@ -116,7 +112,7 @@ func main() {
 		pubKeyFiles[i] = path.Join(workDir, keyFile)
 	}
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, grpcIpcPath)
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, grpc)
 
 	pi.RegisterPublicKeys(enc.PubKeys)
 

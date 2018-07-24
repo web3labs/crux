@@ -12,7 +12,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/crux/protofiles"
+	"github.com/blk-io/chimera-api/protofiles"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"path"

@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"net/http/httputil"
 	"fmt"
-	"github.com/blk-io/crux/protofiles"
+	"github.com/blk-io/chimera-api/protofiles"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"net/url"

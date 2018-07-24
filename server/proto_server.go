@@ -10,7 +10,7 @@ import (
 	"github.com/blk-io/crux/utils"
 	"net"
 	"google.golang.org/grpc/credentials"
-	"github.com/blk-io/crux/protofiles"
+	"github.com/blk-io/chimera-api/protofiles"
 )
 
 func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {

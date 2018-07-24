@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:62e073e81a669097d786be83fee428b0584af9e521b3543063b6f7c599b35517"
+  name = "github.com/blk-io/chimera-api"
+  packages = ["protofiles"]
+  pruneopts = "T"
+  revision = "deee5615cef7315a5206205e046a815cdaf29ba2"
+
+[[projects]]
   digest = "1:1834c1bcecde8bc847628b7c316b8258315749995f0c3a398b1370db8c98a1b3"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
@@ -15,6 +23,7 @@
   packages = [
     "jsonpb",
     "proto",
+    "protoc-gen-go/descriptor",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -251,7 +260,10 @@
   branch = "master"
   digest = "1:5ecad12ed407b601c1cdf780e84b095d57a59343589a12a385d3828ecb2cc0b2"
   name = "google.golang.org/genproto"
-  packages = ["googleapis/rpc/status"]
+  packages = [
+    "googleapis/api/annotations",
+    "googleapis/rpc/status",
+  ]
   pruneopts = "T"
   revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
 
@@ -300,6 +312,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/blk-io/chimera-api/protofiles",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/jsimonetti/berkeleydb",
     "github.com/kevinburke/nacl",

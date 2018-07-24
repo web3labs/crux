@@ -9,7 +9,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"encoding/json"
 	"github.com/blk-io/crux/api"
-	"github.com/blk-io/crux/protofiles"
+	"github.com/blk-io/chimera-api/protofiles"
 )
 
 type Server struct {

@@ -27,7 +27,7 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/jsimonetti/berkeleydb"
+  name = "github.com/block360/berkeleydb"
 
 [[constraint]]
   name = "github.com/kevinburke/nacl"

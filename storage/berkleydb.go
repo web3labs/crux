@@ -2,7 +2,7 @@ package storage
 
 import (
 	"encoding/base64"
-	"github.com/jsimonetti/berkeleydb"
+	"github.com/block360/berkeleydb"
 )
 
 type berkleyDb struct {

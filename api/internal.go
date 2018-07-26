@@ -13,7 +13,7 @@ import (
 	"encoding/json"
 	"net/http/httputil"
 	"fmt"
-	"github.com/blk-io/chimera-api/protofiles"
+	"github.com/blk-io/chimera-api/chimera"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"net/url"
@@ -114,11 +114,11 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 			log.Fatalf("Connection to gRPC server failed with error %s", err)
 		}
 		defer conn.Close()
-		cli := protofiles.NewClientClient(conn)
+		cli := chimera.NewClientClient(conn)
 		if cli == nil{
 			log.Fatalf("Client is not intialised")
 		}
-		party := protofiles.PartyInfo{Url:rawUrl, Recipients:recipients, Parties:s.parties}
+		party := chimera.PartyInfo{Url:rawUrl, Recipients:recipients, Parties:s.parties}
 
 		partyInfoResp, err := cli.UpdatePartyInfo(context.Background(), &party)
 		if err != nil {
@@ -191,7 +191,7 @@ func (s *PartyInfo) GetPartyInfo() {
 	}
 }
 
-func (s *PartyInfo) updatePartyInfoGrpc(partyInfoReq protofiles.PartyInfoResponse, rawUrl string) error {
+func (s *PartyInfo) updatePartyInfoGrpc(partyInfoReq chimera.PartyInfoResponse, rawUrl string) error {
 	pi, err := DecodePartyInfo(partyInfoReq.Payload)
 	if err != nil {
 		log.WithField("url", rawUrl).Errorf(
@@ -304,7 +304,7 @@ func PushGrpc(encoded []byte, path string, epl EncryptedPayload) error {
 		log.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
 	defer conn.Close()
-	cli := protofiles.NewClientClient(conn)
+	cli := chimera.NewClientClient(conn)
 	if cli == nil{
 		log.Fatalf("Client is not intialised")
 	}
@@ -316,14 +316,14 @@ func PushGrpc(encoded []byte, path string, epl EncryptedPayload) error {
 	copy(sender[:], (*epl.Sender)[:])
 	copy(nonce[:], (*epl.Nonce)[:])
 	copy(recipientNonce[:], (*epl.RecipientNonce)[:])
-	encrypt := protofiles.EncryptedPayload{
+	encrypt := chimera.EncryptedPayload{
 		Sender:sender[:],
 		CipherText:epl.CipherText,
 		Nonce:nonce[:],
 		ReciepientNonce:recipientNonce[:],
 		ReciepientBoxes:epl.RecipientBoxes,
 	}
-	pushPayload := protofiles.PushPayload{Ep:&encrypt, Encoded:encoded}
+	pushPayload := chimera.PushPayload{Ep:&encrypt, Encoded:encoded}
 	_, err = cli.Push(context.Background(), &pushPayload)
 	if err != nil{
 		log.Errorf("Push failed with %s", err)

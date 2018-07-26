@@ -10,7 +10,7 @@ import (
 	"github.com/blk-io/crux/utils"
 	"net"
 	"google.golang.org/grpc/credentials"
-	"github.com/blk-io/chimera-api/protofiles"
+	"github.com/blk-io/chimera-api/chimera"
 )
 
 func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {
@@ -20,7 +20,7 @@ func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath
 	}
 	s := Server{Enclave : tm.Enclave}
 	grpcServer := grpc.NewServer()
-	protofiles.RegisterClientServer(grpcServer, &s)
+	chimera.RegisterClientServer(grpcServer, &s)
 	go func() {
 		log.Fatal(grpcServer.Serve(lis))
 	}()
@@ -55,7 +55,7 @@ func (tm *TransactionManager) startJsonServer(port int, grpcJsonPort int) error 
 	defer cancel()
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err := protofiles.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), opts)
+	err := chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), opts)
 	if err != nil {
 		return fmt.Errorf("could not register service: %s", err)
 	}
@@ -75,7 +75,7 @@ func (tm *TransactionManager) startRestServer(port int) error {
 	}
 	s := Server{Enclave : tm.Enclave}
 	grpcServer := grpc.NewServer()
-	protofiles.RegisterClientServer(grpcServer, &s)
+	chimera.RegisterClientServer(grpcServer, &s)
 	go func() {
 		log.Fatal(grpcServer.Serve(lis))
 	}()
@@ -89,7 +89,7 @@ func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, cer
 	defer cancel()
 	mux := runtime.NewServeMux()
 	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
-	err = protofiles.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), []grpc.DialOption{grpc.WithTransportCredentials(creds)})
+	err = chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), []grpc.DialOption{grpc.WithTransportCredentials(creds)})
 	if err != nil {
 		log.Fatalf("could not register service Ping: %s", err)
 		return err
@@ -112,7 +112,7 @@ func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile,ca 
 		log.Fatalf("failed to load credentials : %v", err)
 	}
 	grpcServer := grpc.NewServer(opts...)
-	protofiles.RegisterClientServer(grpcServer, &s)
+	chimera.RegisterClientServer(grpcServer, &s)
 	go func() {
 		log.Fatal(grpcServer.Serve(lis))
 	}()

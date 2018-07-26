@@ -12,7 +12,7 @@ import (
 	"github.com/kevinburke/nacl"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/chimera-api/protofiles"
+	"github.com/blk-io/chimera-api/chimera"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"path"
@@ -135,7 +135,7 @@ func TestSend(t *testing.T) {
 }
 
 func TestGRPCSend(t *testing.T) {
-	sendReqs := []protofiles.SendRequest{
+	sendReqs := []chimera.SendRequest{
 		{
 			Payload: payload,
 			From: sender,
@@ -149,7 +149,7 @@ func TestGRPCSend(t *testing.T) {
 			Payload: payload,
 		},
 	}
-	expected := protofiles.SendResponse{Key: payload}
+	expected := chimera.SendResponse{Key: payload}
 
 	freePort, err := GetFreePort()
 	if err != nil {
@@ -163,14 +163,14 @@ func TestGRPCSend(t *testing.T) {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
 	defer conn.Close()
-	c := protofiles.NewClientClient(conn)
+	c := chimera.NewClientClient(conn)
 
 	for _, sendReq := range sendReqs {
 		resp, err:= c.Send(context.Background(), &sendReq)
 		if err != nil {
 			t.Fatalf("gRPC send failed with %s", err)
 		}
-		response := protofiles.SendResponse{Key:resp.Key}
+		response := chimera.SendResponse{Key:resp.Key}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}
@@ -209,13 +209,13 @@ func TestReceive(t *testing.T) {
 }
 
 func TestGRPCReceive(t *testing.T) {
-	receiveReqs := []protofiles.ReceiveRequest{
+	receiveReqs := []chimera.ReceiveRequest{
 		{
 			Key: payload,
 			To: receiver,
 		},
 	}
-	expected := protofiles.ReceiveResponse{Payload: payload}
+	expected := chimera.ReceiveResponse{Payload: payload}
 	freePort, err := GetFreePort()
 	if err != nil {
 		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
@@ -227,14 +227,14 @@ func TestGRPCReceive(t *testing.T) {
 		t.Fatalf("Connection to gRPC server failed with error %s", err)
 	}
 	defer conn.Close()
-	c := protofiles.NewClientClient(conn)
+	c := chimera.NewClientClient(conn)
 
 	for _, receiveReq := range receiveReqs {
 		resp, err:= c.Receive(context.Background(), &receiveReq)
 		if err != nil {
 			t.Fatalf("gRPC receive failed with %s", err)
 		}
-		response := protofiles.ReceiveResponse{Payload:resp.Payload}
+		response := chimera.ReceiveResponse{Payload:resp.Payload}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}

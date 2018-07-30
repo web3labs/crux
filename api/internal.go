@@ -111,18 +111,21 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 		url, err := completeUrl.Parse(rawUrl)
 		conn, err := grpc.Dial(url.Host, grpc.WithInsecure())
 		if err != nil {
-			log.Fatalf("Connection to gRPC server failed with error %s", err)
+			log.Errorf("Connection to gRPC server failed with error %s", err)
+			continue
 		}
 		defer conn.Close()
 		cli := chimera.NewClientClient(conn)
 		if cli == nil{
-			log.Fatalf("Client is not intialised")
+			log.Errorf("Client is not intialised")
+			continue
 		}
 		party := chimera.PartyInfo{Url:rawUrl, Recipients:recipients, Parties:s.parties}
 
 		partyInfoResp, err := cli.UpdatePartyInfo(context.Background(), &party)
 		if err != nil {
 			log.Errorf("Error in updating party info %s", err)
+			continue
 		}
 		err = s.updatePartyInfoGrpc(*partyInfoResp, s.url)
 		if err != nil {

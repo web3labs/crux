@@ -68,7 +68,7 @@ func (tm *TransactionManager) startJsonServer(port int, grpcJsonPort int) error 
 }
 
 func (tm *TransactionManager) startRestServer(port int) error {
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port)
+	grpcAddress := fmt.Sprintf(":%d", port)
 	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		panic(err)

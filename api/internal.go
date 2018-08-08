@@ -126,6 +126,8 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 		if err != nil {
 			log.Errorf("Error in updating party info %s", err)
 			continue
+		} else {
+			log.Printf("Connected to the other node %s", rawUrl)
 		}
 		err = s.updatePartyInfoGrpc(*partyInfoResp, s.url)
 		if err != nil {

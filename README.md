@@ -12,33 +12,76 @@ secure enclave component of [Quorum](https://github.com/jpmorganchase/quorum/), 
 
 ## Getting started
 
-The best way to start is to run the Quorum-Crux Docker image is 
-[4 Nodes Quorum example](https://github.com/blk-io/crux/tree/master/docker/quorum-crux). This 
-image runs up a 4 node Quorum network using Crux as the secure enclave. 
+### 4-node Quorum network with Crux
+
+The best way to start is to run the 
+[Quorum-Crux Docker image](https://github.com/blk-io/crux/tree/master/docker/quorum-crux). This 
+image runs a 4 node Quorum network using Crux as the secure enclave communicating over gRPC. 
 
 ```bash
+git clone https://github.com/blk-io/crux.git
 docker-compose -f docker/quorum-crux/docker-compose.yaml up
 ```
 
 Where the node details are as follows:
 
-| Name    | Address                 | Account key                                | Crux node key                                |
+| Name    | Quorum node address     | Account key                                | Crux node key                                |
 | ------- | ----------------------- | ------------------------------------------ | -------------------------------------------- |
 | quorum1 | http://localhost:220001 | 0xed9d02e382b34818e88b88a309c7fe71e65f419d | BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo= | 
 | quorum2 | http://localhost:220002 | 0xca843569e3427144cead5e4d5999a3d0ccf92b8e | QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc= |
 | quorum3 | http://localhost:220003 | 0x0fbdc686b912d7722dc86510934589e0aaf3b55a | 1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg= |
 | quorum4 | http://localhost:220004 | 0x9186eb3d20cbd1f5f992a950d808c4495153abd5 | oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8= |
 
+### 2-node Crux only-network
+
 [2 Crux nodes example](https://github.com/blk-io/crux/tree/master/docker/crux) is simple Docker 
 image to just bring up 2 Crux nodes which communicate with each other.
 
 ```bash
+git clone https://github.com/blk-io/crux.git
 docker-compose -f docker/quorum-crux/docker-compose.yaml up
 ```
 
-You can also run the 
+Where the Crux node keys are the same as `quorum1` and `quorum2` above, and are listening on ports 
+9001 and 9002 for gRPC requests. 
+
+### Vagrant VM
+
+For those of you who are unable to use Docker, you can run the  
 [7 Nodes Quorum example](https://github.com/blk-io/quorum-examples) which is an updated version 
-of JP Morgan's Quorum 7 Nodes example to use Crux as the secure enclave.
+of JP Morgan's Quorum 7 Nodes example using Crux as the secure enclave.
+
+### Download the latest binary
+
+The latest binaries for different platforms are available on the 
+[release](https://github.com/blk-io/crux/releases/latest) page.
+
+## Generating keys
+
+Each Crux instance requires at least one key-pair to be associated with it. The key-pair is used 
+to ensure transaction privacy. Crux uses the [NaCl cryptography library](https://nacl.cr.yp.to/).
+
+You use the `--generate-keys` argument to generate a new key-pair with Crux:
+
+```bash
+crux --generate-keys myKey
+```
+
+This will produce two files, named `myKey` and `myKey.pub` reflecting the private and public keys 
+respectively.
+
+## Core configuration
+
+At a minimum, Crux requires the following configuration parameters. This tells the Crux instance 
+what port it is running on and what ip address it should advertise to other peers.
+
+Details of at least one key-pair must be provided for the Crux node to store requests on behalf of.  
+
+```bash
+crux --url=http://127.0.0.1:9001/ --port=9001 --workdir=crux --publickeys=tm.pub --privatekeys=tm.key --othernodes=https://127.0.0.1:9001/
+```
+
+## Build instructions
 
 If you'd prefer to run just a client, you can build using the below instructions and run as per 
 the below.
@@ -68,31 +111,6 @@ Usage of ./bin/crux:
       --tlsservercert          TLS server certificate
       --tlsserverkey           TLS server key
 ``` 
-
-## Generating keys
-
-Each Crux instance requires at least one key-pair to be associated with it. The key-pair is used 
-to ensure transaction privacy. Crux uses the [NaCl cryptography library](https://nacl.cr.yp.to/).
-
-You use the `--generate-keys` argument to generate a new key-pair with Crux:
-
-```bash
-crux --generate-keys myKey
-```
-
-This will produce two files, named `myKey` and `myKey.pub` reflecting the private and public keys 
-respectively.
-
-## Core configuration
-
-At a minimum, Crux requires the following configuration parameters. This tells the Crux instance 
-what port it is running on and what ip address it should advertise to other peers.
-
-Details of at least one key-pair must be provided for the Crux node to store requests on behalf of.  
-
-```bash
-crux --url=http://127.0.0.1:9001/ --port=9001 --workdir=crux --publickeys=tm.pub --privatekeys=tm.key --othernodes=https://127.0.0.1:9001/
-```
 
 ## How does it work?
 

@@ -1,16 +1,8 @@
 FROM alpine:3.8
 
 RUN apk add --no-cache --update unzip db zlib wrk wget libsodium-dev go bash libpthread-stubs db-dev && \
-    apk -X http://dl-cdn.alpinelinux.org/alpine/edge/testing add --no-cache leveldb
-
-RUN \
-  apk --no-cache --update add build-base cmake boost-dev git                                                && \
-  sed -i -E -e 's/include <sys\/poll.h>/include <poll.h>/' /usr/include/boost/asio/detail/socket_types.hpp  && \
-  git clone --depth 1 --recursive -b release https://github.com/ethereum/solidity                           && \
-  cd /solidity && cmake -DCMAKE_BUILD_TYPE=Release -DTESTS=0 -DSTATIC_LINKING=1                             && \
-  cd /solidity && make solc && install -s  solc/solc /usr/bin                                               && \
-  cd / && rm -rf solidity                                                                                   && \
-  rm -rf /var/cache/apk/*
+    apk -X http://dl-cdn.alpinelinux.org/alpine/edge/testing add --no-cache leveldb && \
+    apk --no-cache --update add build-base cmake boost-dev git
 
 ENV PORT=""
 ENV NODE_KEY=""

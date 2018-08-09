@@ -2,4 +2,6 @@
 ### Added
  - Crux, a secure enclave for Quorum written in Golang
  - Protobuf and gRPC support.
- - TLS can be enabled.
+ - TLS support
+ - Docker images
+ 

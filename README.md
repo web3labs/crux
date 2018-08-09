@@ -13,9 +13,32 @@ secure enclave component of [Quorum](https://github.com/jpmorganchase/quorum/), 
 ## Getting started
 
 The best way to start is to run the Quorum-Crux Docker image is 
-[4 Nodes Quorum example](https://github.com/blk-io/crux/docker/quorum-crux). This pulls a fork of Quorum and uses Crux as the secure enclave. You can also run the [7 Nodes Quorum example](https://github.com/blk-io/quorum-examples) which is an updated version of JP Morgan's Quorum 7 Nodes example to use Crux as the secure enclave.
+[4 Nodes Quorum example](https://github.com/blk-io/crux/tree/master/docker/quorum-crux). This 
+image runs up a 4 node Quorum network using Crux as the secure enclave. 
 
-[2 Crux nodes example](https://github.com/blk-io/crux/docker/crux) is simple docker image to just bring up 2 Crux nodes which communicate with each other.
+```bash
+docker-compose -f docker/quorum-crux/docker-compose.yaml up
+```
+
+Where the node details are as follows:
+
+| Name    | Address                 | Account key                                | Crux node key                                |
+| ------- | ----------------------- | ------------------------------------------ | -------------------------------------------- |
+| quorum1 | http://localhost:220001 | 0xed9d02e382b34818e88b88a309c7fe71e65f419d | BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo= | 
+| quorum2 | http://localhost:220002 | 0xca843569e3427144cead5e4d5999a3d0ccf92b8e | QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc= |
+| quorum3 | http://localhost:220003 | 0x0fbdc686b912d7722dc86510934589e0aaf3b55a | 1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg= |
+| quorum4 | http://localhost:220004 | 0x9186eb3d20cbd1f5f992a950d808c4495153abd5 | oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8= |
+
+[2 Crux nodes example](https://github.com/blk-io/crux/tree/master/docker/crux) is simple Docker 
+image to just bring up 2 Crux nodes which communicate with each other.
+
+```bash
+docker-compose -f docker/quorum-crux/docker-compose.yaml up
+```
+
+You can also run the 
+[7 Nodes Quorum example](https://github.com/blk-io/quorum-examples) which is an updated version 
+of JP Morgan's Quorum 7 Nodes example to use Crux as the secure enclave.
 
 If you'd prefer to run just a client, you can build using the below instructions and run as per 
 the below.
@@ -31,16 +54,16 @@ Usage of ./bin/crux:
       --alwayssendto string    List of public keys for nodes to send all transactions too
       --berkeleydb             Use Berkeley DB for storage
       --generate-keys string   Generate a new keypair
-      --othernodes string      "Boot nodes" to connect to to discover the network
+      --othernodes string      `Boot nodes` to connect to to discover the network
       --port int               The local port to listen on (default -1)
       --privatekeys string     Private keys hosted by this node
       --publickeys string      Public keys hosted by this node
       --socket string          IPC socket to create for access to the Private API
-      --storage string         Database storage file name (default "crux.db")
+      --storage string         Database storage file name (default `crux.db`)
       --url string             The URL to advertise to other nodes (reachable by them)
       --verbosity int          Verbosity level of logs (default 1)
-      --workdir string         The folder to put stuff in (default: .) (default ".")
-      --grpc                   Use protobuf + gRPC for communication between nodes
+      --workdir string         The folder to put stuff in (default: .) (default `.`)
+      --grpc                   Use protobuf + gRPC for communication between nodes (default `true`)
       --tls                    Use TLS to secure HTTP communications
       --tlsservercert          TLS server certificate
       --tlsserverkey           TLS server key

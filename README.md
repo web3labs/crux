@@ -1,6 +1,6 @@
 # Crux 
 
-<a href="https://quorumslack.azurewebsites.net" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://quorumslack.azurewebsites.net/badge.svg" alt="Quorum Slack" /></a>
+<a href="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/badge.svg" alt="Quorum Slack" /></a>
 <a href="https://travis-ci.org/blk-io/crux/"><img title="Build Status" src="https://travis-ci.org/blk-io/crux.svg?branch=master" alt="Build Status" /></a>
 
 Data privacy for Quorum. 
@@ -12,11 +12,12 @@ secure enclave component of [Quorum](https://github.com/jpmorganchase/quorum/), 
 
 ## Getting started
 
-The best way to start is to run the Crux 
-[7 Nodes Quorum example](https://github.com/blk-io/quorum-examples). This is a fork of the JP 
-Morgan version.
+The best way to start is to run the Quorum-Crux Docker image is 
+[4 Nodes Quorum example](https://github.com/blk-io/crux/docker/quorum-crux). This pulls a fork of Quorum and uses Crux as the secure enclave. You can also run the [7 Nodes Quorum example](https://github.com/blk-io/quorum-examples) which is an updated version of JP Morgan's Quorum 7 Nodes example to use Crux as the secure enclave.
 
-If you you'd prefer to run just a client, you can build using the below instructions and run as per 
+[2 Crux nodes example](https://github.com/blk-io/crux/docker/crux) is simple docker image to just bring up 2 Crux nodes which communicate with each other.
+
+If you'd prefer to run just a client, you can build using the below instructions and run as per 
 the below.
 
 ```bash

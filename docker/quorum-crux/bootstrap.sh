@@ -18,13 +18,3 @@ git checkout tags/v1.0.0
 make setup && make
 cp bin/crux /usr/local/bin
 rm -r bin
-
-# install Porosity
-wget -q https://github.com/jpmorganchase/quorum/releases/download/v1.2.0/porosity
-mv porosity /usr/local/bin && chmod 0755 /usr/local/bin/porosity
-
-# done!
-echo "Quorum - n"
-echo
-echo 'The Quorum vagrant instance has been provisioned. Examples are available in ~/quorum-examples inside the instance.'
-echo "Use 'vagrant ssh' to open a terminal, 'vagrant suspend' to stop the instance, and 'vagrant destroy' to remove it."

@@ -39,7 +39,7 @@ image to just bring up 2 Crux nodes which communicate with each other.
 
 ```bash
 git clone https://github.com/blk-io/crux.git
-docker-compose -f docker/quorum-crux/docker-compose.yaml up
+docker-compose -f docker/crux/docker-compose.yaml up
 ```
 
 Where the Crux node keys are the same as `quorum1` and `quorum2` above, and are listening on ports 
@@ -67,7 +67,7 @@ You use the `--generate-keys` argument to generate a new key-pair with Crux:
 crux --generate-keys myKey
 ```
 
-This will produce two files, named `myKey` and `myKey.pub` reflecting the private and public keys 
+This will produce two files, named `myKey.key` and `myKey.pub` reflecting the private and public keys 
 respectively.
 
 ## Core configuration

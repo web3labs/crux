@@ -1,4 +1,5 @@
-version: "3.4.1" # build the docker container locally
+# build the docker container locally
+version: "3.4" 
 services:
 
   node1: &quorum_crux_node

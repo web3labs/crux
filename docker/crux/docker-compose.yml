@@ -1,4 +1,4 @@
-version: "3.4"
+version: "2"
 services:
   node1:
     image: blk.io/quorum/crux
@@ -13,6 +13,7 @@ services:
       - OTHER_NODES=http://node2:9000/
       - OWN_URL=node1
       - PORT=9000
+      - CLIENT=true
 
   node2:
     image: blk.io/quorum/crux
@@ -27,3 +28,4 @@ services:
       - OTHER_NODES=http://node1:9000/
       - OWN_URL=node2
       - PORT=9000
+      - CLIENT=false

@@ -32,6 +32,11 @@ Where the node details are as follows:
 | quorum3 | http://localhost:22003 | 0x0fbdc686b912d7722dc86510934589e0aaf3b55a | 1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg= |
 | quorum4 | http://localhost:22004 | 0x9186eb3d20cbd1f5f992a950d808c4495153abd5 | oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8= |
 
+#### local docker
+If you want to make changes to e.g. istanbul-start.sh then build the docker image locally:
+
+    docker-compose -f docker-compose-local.yaml up --build
+
 ### 2-node Crux only-network
 
 [2 Crux nodes example](https://github.com/blk-io/crux/tree/master/docker/crux) is simple Docker 

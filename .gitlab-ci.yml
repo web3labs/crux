@@ -2,6 +2,7 @@ image: golang:latest
 
 variables:
   REPO_NAME: github.com/blk-io/crux
+  DOCKER_DRIVER: overlay
 
 # The problem is that to be able to use go get, one needs to put
 # the repository in the $GOPATH. So for example if your gitlab domain
@@ -21,12 +22,45 @@ stages:
     - build
     - test
 
+test:docker:
+   image: docker:latest
+   stage: test
+   script:
+#    - curl -L https://github.com/docker/compose/releases/download/1.18.0/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+#    - chmod +x /usr/local/bin/docker-compose
+#    - apk add --no-cache py-pip
+#    - pip install --upgrade pip
+#    - docker run -v /var/run/docker.sock:/var/run/docker.sock -ti docker
+#    - docker version
+#    - pip install docker-compose
+#    - docker-compose version
+#    - apk update && apk add docker make py-pip && pip install docker-compose
+    - apk update && apk add --no-cache curl openssl ca-certificates
+    - curl -L https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-`uname -s`-`uname -m` -o /usr/local/bin/docker-compose
+    - chmod a+rx /usr/local/bin/docker-compose
+    - ls -l /usr/local/bin/docker-compose
+    - wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub
+    - wget https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.28-r0/glibc-2.28-r0.apk
+    - apk add glibc-2.28-r0.apk
+    - ln -s /lib/libz.so.1 /usr/glibc-compat/lib/
+    - ln -s /lib/libc.musl-x86_64.so.1 /usr/glibc-compat/lib
+    - ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
+    - which docker-compose
+    - ls -la /usr/local/bin/docker-compose
+    - ls -la /usr/bin/docker-compose
+    - cd docker/crux
+    - docker -v
+    - docker-compose up --build
+    - /usr/bin/docker-compose -v
+    - /usr/bin/docker-compose -f docker/crux/docker-compose.yml up --build
+
 format:
     stage: test
     script:
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
       - make test
+      - docker-compose -f docker/crux/docker-compose.yml up --build
 
 compile:
     stage: build

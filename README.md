@@ -27,10 +27,10 @@ Where the node details are as follows:
 
 | Name    | Quorum node address     | Account key                                | Crux node key                                |
 | ------- | ----------------------- | ------------------------------------------ | -------------------------------------------- |
-| quorum1 | http://localhost:220001 | 0xed9d02e382b34818e88b88a309c7fe71e65f419d | BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo= | 
-| quorum2 | http://localhost:220002 | 0xca843569e3427144cead5e4d5999a3d0ccf92b8e | QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc= |
-| quorum3 | http://localhost:220003 | 0x0fbdc686b912d7722dc86510934589e0aaf3b55a | 1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg= |
-| quorum4 | http://localhost:220004 | 0x9186eb3d20cbd1f5f992a950d808c4495153abd5 | oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8= |
+| quorum1 | http://localhost:22001 | 0xed9d02e382b34818e88b88a309c7fe71e65f419d | BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo= | 
+| quorum2 | http://localhost:22002 | 0xca843569e3427144cead5e4d5999a3d0ccf92b8e | QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc= |
+| quorum3 | http://localhost:22003 | 0x0fbdc686b912d7722dc86510934589e0aaf3b55a | 1iTZde/ndBHvzhcl7V68x44Vx7pl8nwx9LqnM/AfJUg= |
+| quorum4 | http://localhost:22004 | 0x9186eb3d20cbd1f5f992a950d808c4495153abd5 | oNspPPgszVUFw0qmGFfWwh1uxVUXgvBxleXORHj07g8= |
 
 ### 2-node Crux only-network
 
@@ -39,7 +39,7 @@ image to just bring up 2 Crux nodes which communicate with each other.
 
 ```bash
 git clone https://github.com/blk-io/crux.git
-docker-compose -f docker/quorum-crux/docker-compose.yaml up
+docker-compose -f docker/crux/docker-compose.yaml up
 ```
 
 Where the Crux node keys are the same as `quorum1` and `quorum2` above, and are listening on ports 
@@ -67,7 +67,7 @@ You use the `--generate-keys` argument to generate a new key-pair with Crux:
 crux --generate-keys myKey
 ```
 
-This will produce two files, named `myKey` and `myKey.pub` reflecting the private and public keys 
+This will produce two files, named `myKey.key` and `myKey.pub` reflecting the private and public keys 
 respectively.
 
 ## Core configuration

@@ -127,6 +127,37 @@ func (s *Server) Push(ctx context.Context, in *chimera.PushPayload) (*chimera.Pa
 	return &chimera.PartyInfoResponse{Payload: digestHash}, nil
 }
 
+func (s *Server) delete(ctx context.Context, in *chimera.DeleteRequest) (*chimera.DeleteRequest, error) {
+	var deleteReq chimera.DeleteRequest
+	err := s.Enclave.Delete(&deleteReq.Key)
+	if err != nil {
+		log.Fatalf("Unable to delete payload, error: %s\n", err)
+	}
+	return &chimera.DeleteRequest{Key: deleteReq.Key}, nil
+}
+
+func (s *Server) resend(ctx context.Context, in *chimera.ResendRequest) (*chimera.ResendResponse, error) {
+	var resendReq chimera.ResendRequest
+	var err error
+
+	if resendReq.Type == "all" {
+		err = s.Enclave.RetrieveAllFor(&resendReq.PublicKey)
+		if err != nil {
+			log.Fatalf("Invalid body, exited with %s", err)
+		}
+		return nil, err
+	} else if resendReq.Type == "individual" {
+		var encodedPl *[]byte
+		encodedPl, err = s.Enclave.RetrieveFor(&resendReq.Key, &resendReq.PublicKey)
+		if err != nil {
+			log.Fatalf("Invalid body, exited with %s", err)
+			return nil, err
+		}
+		return &chimera.ResendResponse{Encoded: *encodedPl}, nil
+	}
+	return nil, err
+}
+
 func decodeErrorGRPC(name string, value string, err error) {
 	log.Error(fmt.Sprintf("Invalid request: unable to decode %s: %s, error: %s\n",
 		name, value, err))

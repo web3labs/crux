@@ -127,7 +127,7 @@ func (s *Server) Push(ctx context.Context, in *chimera.PushPayload) (*chimera.Pa
 	return &chimera.PartyInfoResponse{Payload: digestHash}, nil
 }
 
-func (s *Server) delete(ctx context.Context, in *chimera.DeleteRequest) (*chimera.DeleteRequest, error) {
+func (s *Server) Delete(ctx context.Context, in *chimera.DeleteRequest) (*chimera.DeleteRequest, error) {
 	var deleteReq chimera.DeleteRequest
 	err := s.Enclave.Delete(&deleteReq.Key)
 	if err != nil {
@@ -136,7 +136,7 @@ func (s *Server) delete(ctx context.Context, in *chimera.DeleteRequest) (*chimer
 	return &chimera.DeleteRequest{Key: deleteReq.Key}, nil
 }
 
-func (s *Server) resend(ctx context.Context, in *chimera.ResendRequest) (*chimera.ResendResponse, error) {
+func (s *Server) Resend(ctx context.Context, in *chimera.ResendRequest) (*chimera.ResendResponse, error) {
 	var resendReq chimera.ResendRequest
 	var err error
 

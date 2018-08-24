@@ -24,7 +24,7 @@ func main() {
 	}
 
 	for _, arg := range args[1:] {
-		if strings.Contains(arg, ".conf") {
+		if strings.Contains(arg, ".conf") && !strings.Contains(arg, "generate-cert") {
 			err := config.LoadConfig(arg)
 			if err != nil {
 				log.Fatalln(err)
@@ -56,6 +56,21 @@ func main() {
 			log.Fatalln(err)
 		}
 		log.Printf("Key pair successfully written to %s", keyFile)
+		os.Exit(0)
+	}
+	genCert := config.GetString(config.GenerateCert)
+	if genCert != "" {
+		if !strings.Contains(genCert, ".conf"){
+			log.Errorf("A Configuration file(.conf) must be used to generate Certificates")
+			os.Exit(1)
+		} else {
+			log.Printf("testing here")
+			err := enclave.CertGen(genCert)
+			if err != nil {
+				log.Errorf("Erred %v", err)
+				config.CertUsage()
+			}
+		}
 		os.Exit(0)
 	}
 

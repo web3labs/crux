@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/viper"
 	"fmt"
 	"os"
-	"log"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

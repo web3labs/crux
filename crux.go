@@ -64,10 +64,8 @@ func main() {
 			log.Errorf("A Configuration file(.conf) must be used to generate Certificates")
 			os.Exit(1)
 		} else {
-			log.Printf("testing here")
 			err := enclave.CertGen(genCert)
 			if err != nil {
-				log.Errorf("Erred %v", err)
 				config.CertUsage()
 			}
 		}

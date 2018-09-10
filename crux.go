@@ -25,7 +25,7 @@ func main() {
 
 	for _, arg := range args[1:] {
 		if strings.Contains(arg, ".conf") {
-			err := config.LoadConfig(os.Args[0])
+			err := config.LoadConfig(arg)
 			if err != nil {
 				log.Fatalln(err)
 			}

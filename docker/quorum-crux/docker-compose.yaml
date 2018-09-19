@@ -1,13 +1,12 @@
-version: "3.4"
+version: '3.4'
 services:
-
   node1: &quorum_crux_node
     # Pull image down from Docker Hub
-    image: blkio10/quorum-crux:v1.0.0
+    # image: blkio10/quorum-crux:v1.0.0
     # Uncomment the below, and comment out the above line to build the Docker images yourself
-#    image: blk.io/quorum/quorum-crux
-#    build:
-#      context: .
+    image: blk.io/quorum/quorum-crux
+    build:
+      context: .
     container_name: quorum1
     ports:
       - 22001:22000

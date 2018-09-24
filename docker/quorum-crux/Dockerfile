@@ -1,8 +1,10 @@
 FROM alpine:3.8
 
-RUN apk add --no-cache --update unzip db zlib wrk wget libsodium-dev go bash libpthread-stubs db-dev && \
-    apk -X http://dl-cdn.alpinelinux.org/alpine/edge/testing add --no-cache leveldb && \
-    apk --no-cache --update add build-base cmake boost-dev git
+RUN apk update --no-cache && \
+    # Update and then install dependencies
+    apk add unzip db zlib wrk wget libsodium-dev go bash libpthread-stubs db-dev && \
+    apk -X http://dl-cdn.alpinelinux.org/alpine/edge/testing add leveldb && \
+    apk add build-base cmake boost-dev git
 
 ENV PORT=""
 ENV NODE_KEY=""

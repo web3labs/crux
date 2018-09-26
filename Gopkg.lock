@@ -2,15 +2,14 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:62e073e81a669097d786be83fee428b0584af9e521b3543063b6f7c599b35517"
+  digest = "1:86840754a6a45d993a441d23094f501eb0cb0b12fe71f4c6cab2f3a826cb8725"
   name = "github.com/blk-io/chimera-api"
-  packages = ["protofiles"]
+  packages = ["chimera"]
   pruneopts = "T"
-  revision = "deee5615cef7315a5206205e046a815cdaf29ba2"
+  revision = "ebd4db90873296427420c2fe2acec18c127b401d"
 
 [[projects]]
-  digest = "1:1834c1bcecde8bc847628b7c316b8258315749995f0c3a398b1370db8c98a1b3"
+  digest = "1:7fc160b460a6fc506b37fcca68332464c3f2cd57b6e3f111f26c5bbfd2d5518e"
   name = "github.com/fsnotify/fsnotify"
   packages = ["."]
   pruneopts = "T"
@@ -18,7 +17,7 @@
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:c97cc0085879c38dbe7cfc84cca26a8d8d6f2a93f671acdd066208985a85d4b3"
+  digest = "1:832e17df5ff8bbe0e0693d2fb46c5e53f96c662ee804049ce3ab6557df74e3ab"
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -36,14 +35,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e99dbc9bee79a1c2406af764186ac826ec502f73de63ee69999866b7d1b412f2"
+  digest = "1:cf5bb7d7c59d8313289e5b756e24462cacd958d1e6db3bdbe1c800c677ad0f94"
   name = "github.com/golang/snappy"
   packages = ["."]
   pruneopts = "T"
   revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
-  digest = "1:1709a0c115bdec713416bed33eee5df8c5d614b8886a102151377919c1f67a9b"
+  digest = "1:69cd81163a00bb8405194d47b8be19283744779b6104f2d6b3735e2a01cdb6fa"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "runtime",
@@ -56,7 +55,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8f7d764c7172f13e906e664bdd6a1304a91ae0b3fbffbfd36675fd9b0738bc48"
+  digest = "1:17a030e647213ad422df723c8ee8902328040dd74b7fc68cb016784baaf95657"
   name = "github.com/hashicorp/hcl"
   packages = [
     ".",
@@ -82,7 +81,7 @@
   revision = "5cde5eaaf78c6510c5f64f5347244806a06ba87b"
 
 [[projects]]
-  digest = "1:08f48150e800c09ee719ab61baa8ed8161b6896d1d9bc40cd92fe1fe62b7a5c2"
+  digest = "1:599ec2ed1b0ab8e5b2b6d6d849c47cbbf5733d7988aee541fd1e5befe69b6095"
   name = "github.com/kevinburke/nacl"
   packages = [
     ".",
@@ -97,7 +96,7 @@
   version = "0.5"
 
 [[projects]]
-  digest = "1:23efb83c2ae6eb987f4187ea73315db2aea24d849f950a4d9ca7fd6cef91e4f1"
+  digest = "1:32ce5f79bec2865f25ae331a39ad67e507c9a6ed0b0da298db2c29efa8fe366f"
   name = "github.com/magiconair/properties"
   packages = ["."]
   pruneopts = "T"
@@ -113,7 +112,7 @@
   revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
-  digest = "1:b1e91eaa4f0bb9ef59cc342f1f3df6160957cd882c5c18b8bd6dc2d0857fdc87"
+  digest = "1:63fc640566e87c5a5f2f3646725f308cf1a6b8e30fdba2d49941d978c3cb9b4d"
   name = "github.com/pelletier/go-toml"
   packages = ["."]
   pruneopts = "T"
@@ -121,7 +120,7 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:f2d6485978c29de1bf447577aed1e53ff4d7cb0000361bbbbbde23a87fae298a"
+  digest = "1:047075087eff9bcda0806c636c479fae29b9ae55da320d3d961eb5d3203e2a75"
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   pruneopts = "T"
@@ -129,7 +128,7 @@
   version = "v1.0.5"
 
 [[projects]]
-  digest = "1:6d5669c75d8044093981de5b0955e582e24978c4a2a04dfef3a7f5fbe3c6ee9e"
+  digest = "1:ed2a3679c070c90f83aacc19d114536db7c5b739980837fbdc86cbf937493400"
   name = "github.com/spf13/afero"
   packages = [
     ".",
@@ -164,7 +163,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:a49ffa1d09595ac8729e1e772cba6d60ea26ed10f0c4be4820b7230c6cfc12ed"
+  digest = "1:fbfebb70b35ccd17f5a91ba29f3d9dfeea149a98b44780a14efade3526c09bb3"
   name = "github.com/spf13/viper"
   packages = ["."]
   pruneopts = "T"
@@ -173,7 +172,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a2c06f269d9dc602ad583db7b6dd19d19e94c5a509cbe1d94d9e0f794ba9e305"
+  digest = "1:ef0753127ee10562925146777ed5f5f41431c0ccc8fa63da1cfae678cc7b8c74"
   name = "github.com/syndtr/goleveldb"
   packages = [
     "leveldb",
@@ -194,7 +193,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:68e7337ca5407b8da2b49b21142d47bce8517a31152c488efafd9c6ad6dce48e"
+  digest = "1:dbe2585d9a08433ff9d1951bab1df0bc8c1bbd50c9fb866f92b661d88beb5694"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
@@ -208,7 +207,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f49302030f7a716cb6c5973a77d6377f0ee4bbf5a250a48f8c9072b2ded10792"
+  digest = "1:1591a31d3ebd0f8d083ec588de4fb0b540809cf75edee9467c554cc17da0620a"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -224,7 +223,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6cb6853c6c658ef6eb0ddec84764f0b9a1e6728e6d6ec1a61c8757d4634f75ae"
+  digest = "1:0c0ea93b25f3ef36c9662a679ba5fddae56ade049701857d020e3e73ae707e4b"
   name = "golang.org/x/sys"
   packages = [
     "unix",
@@ -234,7 +233,7 @@
   revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
 
 [[projects]]
-  digest = "1:24db346d9931fe01f1e9a02aba78ba22c1ecd55bf0f79dd10ba5169719cf002d"
+  digest = "1:6164911cb5e94e8d8d5131d646613ff82c14f5a8ce869de2f6d80d9889df8c5a"
   name = "golang.org/x/text"
   packages = [
     "collate",
@@ -258,7 +257,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5ecad12ed407b601c1cdf780e84b095d57a59343589a12a385d3828ecb2cc0b2"
+  digest = "1:baedbfe72924071a9c7a4f8f12819d3b18a87743f645e5b638ba7a25865f00b1"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api/annotations",
@@ -268,7 +267,7 @@
   revision = "694d95ba50e67b2e363f3483057db5d4910c18f9"
 
 [[projects]]
-  digest = "1:025336210cc711d68bf3d61cab51ccf7b0b33ea2d08def98065c2014ee8cc6c9"
+  digest = "1:cb75df728d7afe7b7a7f546c19b8fd1c5fc801bdfea88fbd1a6a4a0af5072e3a"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -312,7 +311,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/blk-io/chimera-api/protofiles",
+    "github.com/blk-io/chimera-api/chimera",
     "github.com/grpc-ecosystem/grpc-gateway/runtime",
     "github.com/jsimonetti/berkeleydb",
     "github.com/kevinburke/nacl",

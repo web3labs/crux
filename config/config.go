@@ -46,7 +46,7 @@ func InitFlags() {
 	flag.String(GenerateKeys, "", "Generate a new keypair")
 	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
 	flag.Int(Port, -1, "The local port to listen on")
-	flag.String(WorkDir, ".", "The folder to put stuff in (default: .)")
+	flag.String(WorkDir, ".", "The folder to put stuff in ")
 	flag.String(Socket, "crux.ipc", "IPC socket to create for access to the Private API")
 	flag.String(OtherNodes, "", "\"Boot nodes\" to connect to to discover the network")
 	flag.String(PublicKeys, "", "Public keys hosted by this node")

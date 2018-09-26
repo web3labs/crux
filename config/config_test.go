@@ -72,6 +72,8 @@ func verifyConfig(t *testing.T, conf map[string]interface{}, expected map[string
 			switch actV.(type) {  // we cannot use == for equality with []interface{}
 			case []interface{}:
 				eq = reflect.DeepEqual(actV, expV)
+			case []string:
+				eq = reflect.DeepEqual(actV, expV)
 			default:
 				eq = actV == expV
 			}

@@ -22,6 +22,7 @@ const (
 	Socket = "socket"
 
 	GenerateKeys = "generate-keys"
+	GenerateCert = "generate-cert"
 
 	BerkeleyDb = "berkeleydb"
 	UseGRPC = "grpc"
@@ -43,9 +44,10 @@ const (
 // InitFlags initializes all supported command line flags.
 func InitFlags() {
 	flag.String(GenerateKeys, "", "Generate a new keypair")
+	flag.String(GenerateCert, "", "Generate a new Certificate keypair")
 	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
 	flag.Int(Port, -1, "The local port to listen on")
-	flag.String(WorkDir, ".", "The folder to put stuff in (default: .)")
+	flag.String(WorkDir, ".", "The folder to put stuff in")
 	flag.String(Socket, "crux.ipc", "IPC socket to create for access to the Private API")
 	flag.String(OtherNodes, "", "\"Boot nodes\" to connect to to discover the network")
 	flag.String(PublicKeys, "", "Public keys hosted by this node")
@@ -63,7 +65,6 @@ func InitFlags() {
 	flag.Int(GrpcJsonPort, -1, "The local port to listen on for JSON extensions of gRPC")
 
 	// storage not currently supported as we use LevelDB
-
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	viper.BindPFlags(pflag.CommandLine)  // Binding the flags to test the initial configuration
 }

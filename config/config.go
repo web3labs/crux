@@ -11,6 +11,7 @@ import (
 
 const (
 	Verbosity = "verbosity"
+	VerbosityShorthand = "v"
 	AlwaysSendTo = "alwayssendto"
 	Storage = "storage"
 	WorkDir = "workdir"
@@ -55,6 +56,7 @@ func InitFlags() {
 		"Use Berkeley DB for working with an existing Constellation data store [experimental]")
 
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
+	flag.Int(VerbosityShorthand, 1, "Verbosity level of logs (shorthand)")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
 	flag.Bool(UseGRPC, true, "Use gRPC server")
 	flag.Bool(Tls, false, "Use TLS to secure HTTP communications")

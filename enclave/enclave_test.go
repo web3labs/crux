@@ -2,6 +2,10 @@ package enclave
 
 import (
 	"bytes"
+	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/storage"
+	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -9,17 +13,13 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/crux/api"
-	"github.com/blk-io/crux/utils"
-	"github.com/kevinburke/nacl"
 )
 
 var message = []byte("Test message")
 
 type MockClient struct {
 	serviceMu sync.Mutex
-	requests [][]byte
+	requests  [][]byte
 }
 
 func (c *MockClient) Do(req *http.Request) (*http.Response, error) {
@@ -111,7 +111,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -162,7 +162,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 	if !bytes.Equal(message, returned2) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -189,7 +189,7 @@ func TestStoreAndRetrieveSelf(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -270,7 +270,7 @@ func TestRetrieveNotAuthorised(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -297,7 +297,7 @@ func TestDelete(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}

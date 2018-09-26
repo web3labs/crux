@@ -1,24 +1,24 @@
 package server
 
 import (
-	"testing"
-	"net/http"
-	"net/http/httptest"
-	"github.com/blk-io/crux/api"
-	"encoding/json"
-	"encoding/base64"
 	"bytes"
-	"reflect"
-	"github.com/kevinburke/nacl"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/blk-io/chimera-api/chimera"
+	"github.com/blk-io/crux/api"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/chimera-api/chimera"
+	"github.com/kevinburke/nacl"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"path"
 	"io/ioutil"
-	"fmt"
-	log "github.com/sirupsen/logrus"
+	"net/http"
+	"net/http/httptest"
+	"path"
+	"reflect"
+	"testing"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -27,52 +27,52 @@ const receiver = "QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc="
 var payload = []byte("payload")
 var encodedPayload = base64.StdEncoding.EncodeToString(payload)
 
-type MockEnclave struct {}
+type MockEnclave struct{}
 
-func (s* MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
+func (s *MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
 	return *message, nil
 }
 
-func (s* MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
+func (s *MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
-func (s* MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
+func (s *MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
 
-func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
+func (s *MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
+func (s *MockEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
 	return *digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
+func (s *MockEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
 	return digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
+func (s *MockEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
 	return nil
 }
 
-func (s* MockEnclave) Delete(digestHash *[]byte) error {
+func (s *MockEnclave) Delete(digestHash *[]byte) error {
 	return nil
 }
 
-func (s* MockEnclave) UpdatePartyInfo(encoded []byte) {}
+func (s *MockEnclave) UpdatePartyInfo(encoded []byte) {}
 
-func (s* MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
+func (s *MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
 
-func (s* MockEnclave) GetEncodedPartyInfo() []byte {
+func (s *MockEnclave) GetEncodedPartyInfo() []byte {
 	return payload
 }
 
-func (s* MockEnclave) GetEncodedPartyInfoGrpc() []byte{
+func (s *MockEnclave) GetEncodedPartyInfoGrpc() []byte {
 	return payload
 }
 
-func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool) {
 	return "", nil, nil
 }
 
@@ -112,12 +112,12 @@ func TestSend(t *testing.T) {
 	sendReqs := []api.SendRequest{
 		{
 			Payload: encodedPayload,
-			From: sender,
-			To: []string{receiver},
+			From:    sender,
+			To:      []string{receiver},
 		},
 		{
 			Payload: encodedPayload,
-			To: []string{},
+			To:      []string{},
 		},
 		{
 			Payload: encodedPayload,
@@ -138,12 +138,12 @@ func TestGRPCSend(t *testing.T) {
 	sendReqs := []chimera.SendRequest{
 		{
 			Payload: payload,
-			From: sender,
-			To: []string{receiver},
+			From:    sender,
+			To:      []string{receiver},
 		},
 		{
 			Payload: payload,
-			To: []string{},
+			To:      []string{},
 		},
 		{
 			Payload: payload,
@@ -166,11 +166,11 @@ func TestGRPCSend(t *testing.T) {
 	c := chimera.NewClientClient(conn)
 
 	for _, sendReq := range sendReqs {
-		resp, err:= c.Send(context.Background(), &sendReq)
+		resp, err := c.Send(context.Background(), &sendReq)
 		if err != nil {
 			t.Fatalf("gRPC send failed with %s", err)
 		}
-		response := chimera.SendResponse{Key:resp.Key}
+		response := chimera.SendResponse{Key: resp.Key}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}
@@ -194,7 +194,7 @@ func TestReceive(t *testing.T) {
 	receiveReqs := []api.ReceiveRequest{
 		{
 			Key: encodedPayload,
-			To: receiver,
+			To:  receiver,
 		},
 	}
 
@@ -212,7 +212,7 @@ func TestGRPCReceive(t *testing.T) {
 	receiveReqs := []chimera.ReceiveRequest{
 		{
 			Key: payload,
-			To: receiver,
+			To:  receiver,
 		},
 	}
 	expected := chimera.ReceiveResponse{Payload: payload}
@@ -230,11 +230,11 @@ func TestGRPCReceive(t *testing.T) {
 	c := chimera.NewClientClient(conn)
 
 	for _, receiveReq := range receiveReqs {
-		resp, err:= c.Receive(context.Background(), &receiveReq)
+		resp, err := c.Receive(context.Background(), &receiveReq)
 		if err != nil {
 			t.Fatalf("gRPC receive failed with %s", err)
 		}
-		response := chimera.ReceiveResponse{Payload:resp.Payload}
+		response := chimera.ReceiveResponse{Payload: resp.Payload}
 		if !reflect.DeepEqual(response, expected) {
 			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 		}
@@ -264,9 +264,9 @@ func TestNilKeyReceivedRaw(t *testing.T) {
 func TestPush(t *testing.T) {
 
 	epl := api.EncryptedPayload{
-		Sender: nacl.NewKey(),
-		CipherText: []byte(payload),
-		Nonce: nacl.NewNonce(),
+		Sender:         nacl.NewKey(),
+		CipherText:     []byte(payload),
+		Nonce:          nacl.NewNonce(),
 		RecipientBoxes: [][]byte{[]byte(payload)},
 		RecipientNonce: nacl.NewNonce(),
 	}
@@ -405,12 +405,11 @@ func runRawHandlerTest(
 	}
 }
 
-
 func TestResendIndividual(t *testing.T) {
 	resendReq := api.ResendRequest{
-		Type:       "individual",
-		PublicKey:  sender,
-		Key:        encodedPayload,
+		Type:      "individual",
+		PublicKey: sender,
+		Key:       encodedPayload,
 	}
 
 	body := runResendTest(t, resendReq)
@@ -423,8 +422,8 @@ func TestResendIndividual(t *testing.T) {
 
 func TestResendAll(t *testing.T) {
 	resendReq := api.ResendRequest{
-		Type:       "all",
-		PublicKey:  sender,
+		Type:      "all",
+		PublicKey: sender,
 	}
 
 	body := runResendTest(t, resendReq)
@@ -483,7 +482,7 @@ func TestPartyInfo(t *testing.T) {
 
 func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 	encodedPartyInfo := api.EncodePartyInfo(pi)
-	encoded, err := json.Marshal(api.PartyInfoResponse{Payload:encodedPartyInfo})
+	encoded, err := json.Marshal(api.PartyInfoResponse{Payload: encodedPartyInfo})
 	if err != nil {
 		t.Errorf("Marshalling failed %v", err)
 	}
@@ -509,9 +508,9 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 	}
 }
 
-func InitgRPCServer(t *testing.T, grpc bool, port int) (string) {
+func InitgRPCServer(t *testing.T, grpc bool, port int) string {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, -1,false, "", "")
+	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, -1, false, "", "")
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
@@ -555,7 +554,7 @@ func TestInit(t *testing.T) {
 		t.Error(err)
 	}
 	certFile, keyFile := "../enclave/testdata/cert/server.crt", "../enclave/testdata/cert/server.key"
-	tm, err := Init(enc, 9001,  ipcPath, false, -1, true, certFile, keyFile)
+	tm, err := Init(enc, 9001, ipcPath, false, -1, true, certFile, keyFile)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

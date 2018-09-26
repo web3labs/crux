@@ -1,9 +1,9 @@
 package api
 
 import (
-	"testing"
-	"net/http"
 	"github.com/kevinburke/nacl"
+	"net/http"
+	"testing"
 )
 
 func TestRegisterPublicKeys(t *testing.T) {
@@ -21,7 +21,7 @@ func TestRegisterPublicKeys(t *testing.T) {
 	pi.RegisterPublicKeys(expKey)
 
 	url, ok := pi.GetRecipient(expKey[0])
-	if !ok || url != expUrl{
+	if !ok || url != expUrl {
 		t.Errorf("Url is %s whereas %s is expected", url, expUrl)
 	}
 

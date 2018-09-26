@@ -3,19 +3,19 @@ package server
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strconv"
 	"github.com/blk-io/crux/api"
 	"github.com/blk-io/crux/utils"
-	log "github.com/sirupsen/logrus"
-	"encoding/hex"
-	"net/textproto"
-	"net/http/httputil"
-	"os"
 	"github.com/kevinburke/nacl"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
+	"net/http"
+	"net/http/httputil"
+	"net/textproto"
+	"os"
+	"strconv"
 )
 
 // Enclave is the interface used by the transaction enclaves.
@@ -76,7 +76,7 @@ func requestLogger(handler http.Handler) http.Handler {
 
 // Init initializes a new TransactionManager instance.
 func Init(enc Enclave, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
-	tm := TransactionManager{Enclave : enc}
+	tm := TransactionManager{Enclave: enc}
 	var err error
 	if grpc == true {
 		err = tm.startRpcServer(port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
@@ -97,7 +97,7 @@ func (tm *TransactionManager) startHttpserver(port int, ipcPath string, tls bool
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
 	serverUrl := "localhost:" + strconv.Itoa(port)
-	if tls{
+	if tls {
 		err := CheckCertFiles(certFile, keyFile)
 		if err != nil {
 			log.Fatal(err)
@@ -224,9 +224,9 @@ func (s *TransactionManager) processSend(
 	payload *[]byte) ([]byte, error) {
 
 	log.WithFields(log.Fields{
-		"b64From" : b64from,
+		"b64From":       b64from,
 		"b64Recipients": b64recipients,
-		"payload": hex.EncodeToString(*payload),}).Debugf(
+		"payload":       hex.EncodeToString(*payload)}).Debugf(
 		"Processing send request")
 
 	sender, err := base64.StdEncoding.DecodeString(b64from)
@@ -421,4 +421,3 @@ func internalServerError(w http.ResponseWriter, message string) {
 	w.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(w, message)
 }
-

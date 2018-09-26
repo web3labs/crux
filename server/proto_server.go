@@ -2,15 +2,15 @@ package server
 
 import (
 	"fmt"
-	"google.golang.org/grpc"
+	"github.com/blk-io/chimera-api/chimera"
+	"github.com/blk-io/crux/utils"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-	"net/http"
-	"github.com/blk-io/crux/utils"
-	"net"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"github.com/blk-io/chimera-api/chimera"
+	"net"
+	"net/http"
 )
 
 func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {
@@ -18,7 +18,7 @@ func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
-	s := Server{Enclave : tm.Enclave}
+	s := Server{Enclave: tm.Enclave}
 	grpcServer := grpc.NewServer()
 	chimera.RegisterClientServer(grpcServer, &s)
 	go func() {
@@ -73,7 +73,7 @@ func (tm *TransactionManager) startRestServer(port int) error {
 	if err != nil {
 		panic(err)
 	}
-	s := Server{Enclave : tm.Enclave}
+	s := Server{Enclave: tm.Enclave}
 	grpcServer := grpc.NewServer()
 	chimera.RegisterClientServer(grpcServer, &s)
 	go func() {
@@ -82,7 +82,7 @@ func (tm *TransactionManager) startRestServer(port int) error {
 	return nil
 }
 
-func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, certFile, keyFile,ca string) error {
+func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, certFile, keyFile, ca string) error {
 	address := fmt.Sprintf("%s:%d", "localhost", grpcJsonPort)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -99,13 +99,13 @@ func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, cer
 	return nil
 }
 
-func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile,ca string) error {
+func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile, ca string) error {
 	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port)
 	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		log.Fatalf("failed to start gRPC REST server: %s", err)
 	}
-	s := Server{Enclave : tm.Enclave}
+	s := Server{Enclave: tm.Enclave}
 	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
 	opts := []grpc.ServerOption{grpc.Creds(creds)}
 	if err != nil {

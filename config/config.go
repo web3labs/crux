@@ -3,42 +3,42 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"os"
-	"fmt"
 )
 
 const (
-	Verbosity = "verbosity"
+	Verbosity          = "verbosity"
 	VerbosityShorthand = "v"
-	AlwaysSendTo = "alwayssendto"
-	Storage = "storage"
-	WorkDir = "workdir"
-	Url = "url"
-	OtherNodes = "othernodes"
-	PublicKeys = "publickeys"
-	PrivateKeys = "privatekeys"
-	Port = "port"
-	Socket = "socket"
+	AlwaysSendTo       = "alwayssendto"
+	Storage            = "storage"
+	WorkDir            = "workdir"
+	Url                = "url"
+	OtherNodes         = "othernodes"
+	PublicKeys         = "publickeys"
+	PrivateKeys        = "privatekeys"
+	Port               = "port"
+	Socket             = "socket"
 
 	GenerateKeys = "generate-keys"
 
-	BerkeleyDb = "berkeleydb"
-	UseGRPC = "grpc"
+	BerkeleyDb   = "berkeleydb"
+	UseGRPC      = "grpc"
 	GrpcJsonPort = "grpcport"
 
-	Tls = "tls"
-	TlsServerChain = "tlsserverchain"
-	TlsServerTrust = "tlsservertrust"
+	Tls             = "tls"
+	TlsServerChain  = "tlsserverchain"
+	TlsServerTrust  = "tlsservertrust"
 	TlsKnownServers = "tlsknownservers"
-	TlsClientCert = "tlsclientcert"
-	TlsServerCert = "tlsservercert"
+	TlsClientCert   = "tlsclientcert"
+	TlsServerCert   = "tlsservercert"
 	TlsKnownClients = "tlsknownclients"
-	TlsClientChain = "tlsclientchain"
-	TlsClientKey = "tlsclientkey"
-	TlsClientTrust = "tlsclienttrust"
-	TlsServerKey = "tlsserverkey"
+	TlsClientChain  = "tlsclientchain"
+	TlsClientKey    = "tlsclientkey"
+	TlsClientTrust  = "tlsclienttrust"
+	TlsServerKey    = "tlsserverkey"
 )
 
 // InitFlags initializes all supported command line flags.
@@ -67,7 +67,7 @@ func InitFlags() {
 	// storage not currently supported as we use LevelDB
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	viper.BindPFlags(pflag.CommandLine)  // Binding the flags to test the initial configuration
+	viper.BindPFlags(pflag.CommandLine) // Binding the flags to test the initial configuration
 }
 
 // Usage prints usage instructions to the console.
@@ -109,5 +109,3 @@ func GetString(key string) string {
 func GetStringSlice(key string) []string {
 	return viper.GetStringSlice(key)
 }
-
-

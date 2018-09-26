@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"testing"
 	"io/ioutil"
+	"testing"
 )
 
 func TestCreateIpcSocket(t *testing.T) {
@@ -13,7 +13,7 @@ func TestCreateIpcSocket(t *testing.T) {
 
 	listener, err := CreateIpcSocket(dbPath)
 
-	if err != nil{
+	if err != nil {
 		t.Error(err)
 	}
 

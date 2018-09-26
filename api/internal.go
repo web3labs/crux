@@ -2,21 +2,21 @@ package api
 
 import (
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"github.com/blk-io/chimera-api/chimera"
+	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"time"
-	log "github.com/sirupsen/logrus"
-	"github.com/kevinburke/nacl"
-	"github.com/blk-io/crux/utils"
-	"encoding/hex"
-	"encoding/json"
 	"net/http/httputil"
-	"fmt"
-	"github.com/blk-io/chimera-api/chimera"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"net/url"
+	"time"
 )
 
 // EncryptedPayload is the struct used for storing all data associated with an encrypted
@@ -31,11 +31,11 @@ type EncryptedPayload struct {
 
 // PartyInfo is a struct that stores details of all enclave nodes (or parties) on the network.
 type PartyInfo struct {
-	url string  // URL identifying this node
-	recipients map[[nacl.KeySize]byte]string  // public key -> URL
-	parties    map[string]bool  // Node (or party) URLs
+	url        string                        // URL identifying this node
+	recipients map[[nacl.KeySize]byte]string // public key -> URL
+	parties    map[string]bool               // Node (or party) URLs
 	client     utils.HttpClient
-	grpc 	   bool
+	grpc       bool
 }
 
 // GetRecipient retrieves the URL associated with the provided recipient.
@@ -60,7 +60,7 @@ func InitPartyInfo(rawUrl string, otherNodes []string, client utils.HttpClient, 
 		recipients: make(map[[nacl.KeySize]byte]string),
 		parties:    parties,
 		client:     client,
-		grpc:		grpc,
+		grpc:       grpc,
 	}
 }
 
@@ -95,7 +95,7 @@ func (s *PartyInfo) RegisterPublicKeys(pubKeys []nacl.Key) {
 
 func (s *PartyInfo) GetPartyInfoGrpc() {
 	recipients := make(map[string][]byte)
-	for key, url := range s.recipients{
+	for key, url := range s.recipients {
 		recipients[url] = key[:]
 	}
 	urls := make(map[string]bool)
@@ -103,7 +103,7 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 		urls[k] = v
 	}
 
-	for rawUrl := range urls{
+	for rawUrl := range urls {
 		if rawUrl == s.url {
 			continue
 		}
@@ -116,11 +116,11 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 		}
 		defer conn.Close()
 		cli := chimera.NewClientClient(conn)
-		if cli == nil{
+		if cli == nil {
 			log.Errorf("Client is not intialised")
 			continue
 		}
-		party := chimera.PartyInfo{Url:rawUrl, Recipients:recipients, Parties:s.parties}
+		party := chimera.PartyInfo{Url: rawUrl, Recipients: recipients, Parties: s.parties}
 
 		partyInfoResp, err := cli.UpdatePartyInfo(context.Background(), &party)
 		if err != nil {
@@ -136,6 +136,7 @@ func (s *PartyInfo) GetPartyInfoGrpc() {
 		}
 	}
 }
+
 // GetPartyInfo requests PartyInfo data from all remote nodes this node is aware of. The data
 // provided in each response is applied to this node.
 func (s *PartyInfo) GetPartyInfo() {
@@ -220,14 +221,14 @@ func (s *PartyInfo) updatePartyInfo(resp *http.Response, rawUrl string) error {
 	return nil
 }
 
-func (s *PartyInfo) getEncoded(encodedPartyInfo []byte) []byte{
+func (s *PartyInfo) getEncoded(encodedPartyInfo []byte) []byte {
 	if s.grpc {
 		recipients := make(map[string][]byte)
-		for key, url := range s.recipients{
+		for key, url := range s.recipients {
 			recipients[url] = key[:]
 		}
 		e, err := json.Marshal(UpdatePartyInfo{s.url, recipients, s.parties})
-		if err != nil{
+		if err != nil {
 			log.Errorf("Marshalling failed %v", err)
 			return nil
 		}
@@ -245,9 +246,9 @@ func (s *PartyInfo) PollPartyInfo() {
 	go func() {
 		for {
 			select {
-			case <- ticker.C:
+			case <-ticker.C:
 				s.GetPartyInfo()
-			case <- quit:
+			case <-quit:
 				ticker.Stop()
 				return
 			}
@@ -310,7 +311,7 @@ func PushGrpc(encoded []byte, path string, epl EncryptedPayload) error {
 	}
 	defer conn.Close()
 	cli := chimera.NewClientClient(conn)
-	if cli == nil{
+	if cli == nil {
 		log.Fatalf("Client is not intialised")
 	}
 
@@ -322,20 +323,21 @@ func PushGrpc(encoded []byte, path string, epl EncryptedPayload) error {
 	copy(nonce[:], (*epl.Nonce)[:])
 	copy(recipientNonce[:], (*epl.RecipientNonce)[:])
 	encrypt := chimera.EncryptedPayload{
-		Sender:sender[:],
-		CipherText:epl.CipherText,
-		Nonce:nonce[:],
-		ReciepientNonce:recipientNonce[:],
-		ReciepientBoxes:epl.RecipientBoxes,
+		Sender:          sender[:],
+		CipherText:      epl.CipherText,
+		Nonce:           nonce[:],
+		ReciepientNonce: recipientNonce[:],
+		ReciepientBoxes: epl.RecipientBoxes,
 	}
-	pushPayload := chimera.PushPayload{Ep:&encrypt, Encoded:encoded}
+	pushPayload := chimera.PushPayload{Ep: &encrypt, Encoded: encoded}
 	_, err = cli.Push(context.Background(), &pushPayload)
-	if err != nil{
+	if err != nil {
 		log.Errorf("Push failed with %s", err)
 		return err
 	}
 	return nil
 }
+
 // Push is responsible for propagating the encoded payload to the given remote node.
 func Push(encoded []byte, url string, client utils.HttpClient) (string, error) {
 

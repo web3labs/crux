@@ -1,9 +1,9 @@
 package api
 
 import (
-	"github.com/kevinburke/nacl"
 	"encoding/binary"
 	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
 )
 
 func EncodePayload(ep EncryptedPayload) []byte {
@@ -23,8 +23,8 @@ func EncodePayload(ep EncryptedPayload) []byte {
 func DecodePayload(encoded []byte) EncryptedPayload {
 
 	ep := EncryptedPayload{
-		Sender: new([nacl.KeySize]byte),
-		Nonce: new([nacl.NonceSize]byte),
+		Sender:         new([nacl.KeySize]byte),
+		Nonce:          new([nacl.NonceSize]byte),
 		RecipientNonce: new([nacl.NonceSize]byte),
 	}
 
@@ -128,7 +128,7 @@ func writeInt(v int, dest []byte, offset int) ([]byte, int) {
 
 func confirmCapacity(dest []byte, offset, required int) []byte {
 	length := len(dest)
-	if length - offset < required {
+	if length-offset < required {
 		var newLength int
 		if required > length {
 			newLength = utils.NextPowerOf2(required)
@@ -157,14 +157,14 @@ func writeSlice(src []byte, dest []byte, offset int) ([]byte, int) {
 func readSliceToArray(src []byte, offset int, dest []byte) int {
 	var length int
 	length, offset = readInt(src, offset)
-	offset += copy(dest, src[offset:offset + length])
+	offset += copy(dest, src[offset:offset+length])
 	return offset
 }
 
 func readSlice(src []byte, offset int) ([]byte, int) {
 	var length int
 	length, offset = readInt(src, offset)
-	return src[offset:offset + length], offset + length
+	return src[offset : offset+length], offset + length
 }
 
 func writeSliceOfSlice(src [][]byte, dest []byte, offset int) ([]byte, int) {
@@ -186,7 +186,7 @@ func readSliceOfSlice(src []byte, offset int) ([][]byte, int) {
 		var length int
 		length, offset = readInt(src, offset)
 		result[i] = append(
-			result[i], src[offset:offset + length]...)
+			result[i], src[offset:offset+length]...)
 		offset += length
 	}
 	return result, offset

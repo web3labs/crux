@@ -4,33 +4,33 @@ package enclave
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/json"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
-	"strings"
+	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/storage"
+	"github.com/blk-io/crux/utils"
 	"github.com/kevinburke/nacl"
 	"github.com/kevinburke/nacl/box"
 	"github.com/kevinburke/nacl/secretbox"
 	log "github.com/sirupsen/logrus"
-	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/crux/api"
-	"github.com/blk-io/crux/utils"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
 )
 
 // SecureEnclave is the secure transaction enclave.
 type SecureEnclave struct {
-	Db         storage.DataStore  // The underlying key-value datastore for encrypted transactions
-	PubKeys    []nacl.Key  // Public keys associated with this enclave
-	PrivKeys   []nacl.Key  // Private keys associated with this enclave
-	selfPubKey nacl.Key  // An ephemeral key used for transactions only intended for this enclave
-	PartyInfo  api.PartyInfo  // Details of all other nodes (or parties) on the network
-	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key  // Maps sender -> recipient -> shared key
-	client     utils.HttpClient  // The underlying HTTP client used to propagate requests
-	grpc	   bool
+	Db         storage.DataStore                  // The underlying key-value datastore for encrypted transactions
+	PubKeys    []nacl.Key                         // Public keys associated with this enclave
+	PrivKeys   []nacl.Key                         // Private keys associated with this enclave
+	selfPubKey nacl.Key                           // An ephemeral key used for transactions only intended for this enclave
+	PartyInfo  api.PartyInfo                      // Details of all other nodes (or parties) on the network
+	keyCache   map[nacl.Key]map[nacl.Key]nacl.Key // Maps sender -> recipient -> shared key
+	client     utils.HttpClient                   // The underlying HTTP client used to propagate requests
+	grpc       bool
 }
 
 // Init creates a new instance of the SecureEnclave.
@@ -55,12 +55,12 @@ func Init(
 	}
 
 	enc := SecureEnclave{
-		Db : db,
-		PubKeys: pubKeys,
-		PrivKeys: privKeys,
+		Db:        db,
+		PubKeys:   pubKeys,
+		PrivKeys:  privKeys,
 		PartyInfo: pi,
-		client: client,
-		grpc: grpc,
+		client:    client,
+		grpc:      grpc,
 	}
 
 	// We use shared keys for encrypting data. The keys between a specific sender and recipient are
@@ -108,31 +108,31 @@ func Init(
 func (s *SecureEnclave) Store(
 	message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
 
-		var err error
-		var senderPubKey, senderPrivKey nacl.Key
+	var err error
+	var senderPubKey, senderPrivKey nacl.Key
 
-		if len(sender) == 0 {
-			// from address is either default or specified on communication
-			senderPubKey = s.PubKeys[0]
-			senderPrivKey = s.PrivKeys[0]
-		} else {
-			senderPubKey, err = utils.ToKey(sender)
-			if err != nil {
-				log.WithField("senderPubKey", sender).Errorf(
-					"Unable to load sender public key, %v", err)
-				return nil, err
-			}
-
-			senderPrivKey, err = s.resolvePrivateKey(senderPubKey)
-			if err != nil {
-				log.WithField("senderPubKey", sender).Errorf(
-					"Unable to locate private key for sender public key, %v", err)
-				return nil, err
-			}
+	if len(sender) == 0 {
+		// from address is either default or specified on communication
+		senderPubKey = s.PubKeys[0]
+		senderPrivKey = s.PrivKeys[0]
+	} else {
+		senderPubKey, err = utils.ToKey(sender)
+		if err != nil {
+			log.WithField("senderPubKey", sender).Errorf(
+				"Unable to load sender public key, %v", err)
+			return nil, err
 		}
 
-		return s.store(message, senderPubKey, senderPrivKey, recipients)
+		senderPrivKey, err = s.resolvePrivateKey(senderPubKey)
+		if err != nil {
+			log.WithField("senderPubKey", sender).Errorf(
+				"Unable to locate private key for sender public key, %v", err)
+			return nil, err
+		}
 	}
+
+	return s.store(message, senderPubKey, senderPrivKey, recipients)
+}
 
 func (s *SecureEnclave) store(
 	message *[]byte,
@@ -181,7 +181,7 @@ func (s *SecureEnclave) store(
 	sharedKey := s.resolveSharedKey(senderPrivKey, senderPubKey, recipientKey)
 
 	sealedBox := sealPayload(epl.RecipientNonce, masterKey, sharedKey)
-	epl.RecipientBoxes = [][]byte{ sealedBox }
+	epl.RecipientBoxes = [][]byte{sealedBox}
 
 	encodedEpl := api.EncodePayloadWithRecipients(epl, recipients)
 	digest, err := s.storePayload(epl, encodedEpl)
@@ -197,7 +197,7 @@ func (s *SecureEnclave) store(
 			}
 
 			log.WithFields(log.Fields{
-				"recipient": hex.EncodeToString(recipient),"digest": hex.EncodeToString(digest),
+				"recipient": hex.EncodeToString(recipient), "digest": hex.EncodeToString(digest),
 			}).Debug("Publishing payload")
 
 			s.publishPayload(recipientEpl, recipient)
@@ -216,7 +216,7 @@ func createEncryptedPayload(
 
 	sealedMessage := secretbox.Seal([]byte{}, *message, nonce, masterKey)
 
-	return api.EncryptedPayload {
+	return api.EncryptedPayload{
 		Sender:         senderPubKey,
 		CipherText:     sealedMessage,
 		Nonce:          nonce,
@@ -445,7 +445,7 @@ func (s *SecureEnclave) GetEncodedPartyInfoGrpc() []byte {
 	return encoded
 }
 
-func (s *SecureEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool){
+func (s *SecureEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool) {
 	return s.PartyInfo.GetAllValues()
 }
 
@@ -517,7 +517,7 @@ func DoKeyGeneration(keyFile string) error {
 	b64PubKey := base64.StdEncoding.EncodeToString((*pubKey)[:])
 	b64PrivKey := base64.StdEncoding.EncodeToString((*privKey)[:])
 
-	err = ioutil.WriteFile(keyFile + ".pub", []byte(b64PubKey), 0600)
+	err = ioutil.WriteFile(keyFile+".pub", []byte(b64PubKey), 0600)
 	if err != nil {
 		return fmt.Errorf("unable to write public key: %s, error: %v", keyFile, err)
 	}
@@ -535,7 +535,7 @@ func DoKeyGeneration(keyFile string) error {
 		return fmt.Errorf("unable to encode private key: %v, error: %v", jsonKey, err)
 	}
 
-	err = ioutil.WriteFile(keyFile + ".key", encoded, 0600)
+	err = ioutil.WriteFile(keyFile+".key", encoded, 0600)
 	if err != nil {
 		return fmt.Errorf("unable to write private key: %s, error: %v", keyFile, err)
 	}

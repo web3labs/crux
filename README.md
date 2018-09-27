@@ -2,6 +2,7 @@
 
 <a href="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/badge.svg" alt="Quorum Slack" /></a>
 <a href="https://travis-ci.org/blk-io/crux/"><img title="Build Status" src="https://travis-ci.org/blk-io/crux.svg?branch=master" alt="Build Status" /></a>
+<a href="https://goreportcard.com/report/github.com/blk-io/crux"><img title="Go Report Card" src="https://goreportcard.com/badge/github.com/blk-io/crux" alt="Go Report Card" /></a>
 
 Data privacy for Quorum. 
 
@@ -95,21 +96,23 @@ make setup && make
 Usage of ./bin/crux:
       crux.config              Optional config file
       --alwayssendto string    List of public keys for nodes to send all transactions too
-      --berkeleydb             Use Berkeley DB for storage
+      --berkeleydb             Use Berkeley DB for working with an existing Constellation data store [experimental]
       --generate-keys string   Generate a new keypair
-      --othernodes string      `Boot nodes` to connect to to discover the network
+      --grpc                   Use gRPC server (default true)
+      --grpcport int           The local port to listen on for JSON extensions of gRPC (default -1)
+      --othernodes string      "Boot nodes" to connect to to discover the network
       --port int               The local port to listen on (default -1)
       --privatekeys string     Private keys hosted by this node
       --publickeys string      Public keys hosted by this node
-      --socket string          IPC socket to create for access to the Private API
-      --storage string         Database storage file name (default `crux.db`)
-      --url string             The URL to advertise to other nodes (reachable by them)
-      --verbosity int          Verbosity level of logs (default 1)
-      --workdir string         The folder to put stuff in (default: .) (default `.`)
-      --grpc                   Use protobuf + gRPC for communication between nodes (default `true`)
+      --socket string          IPC socket to create for access to the Private API (default "crux.ipc")
+      --storage string         Database storage file name (default "crux.db")
       --tls                    Use TLS to secure HTTP communications
-      --tlsservercert          TLS server certificate
-      --tlsserverkey           TLS server key
+      --tlsservercert string   The server certificate to be used
+      --tlsserverkey string    The server private key
+      --url string             The URL to advertise to other nodes (reachable by them)
+  -v, --v int                  Verbosity level of logs (shorthand) (default 1)
+      --verbosity int          Verbosity level of logs (default 1)
+      --workdir string         The folder to put stuff in (default: .) (default ".")
 ``` 
 
 ## How does it work?

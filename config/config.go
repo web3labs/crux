@@ -3,41 +3,42 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"os"
-	"fmt"
 )
 
 const (
-	Verbosity = "verbosity"
-	AlwaysSendTo = "alwayssendto"
-	Storage = "storage"
-	WorkDir = "workdir"
-	Url = "url"
-	OtherNodes = "othernodes"
-	PublicKeys = "publickeys"
-	PrivateKeys = "privatekeys"
-	Port = "port"
-	Socket = "socket"
+	Verbosity          = "verbosity"
+	VerbosityShorthand = "v"
+	AlwaysSendTo       = "alwayssendto"
+	Storage            = "storage"
+	WorkDir            = "workdir"
+	Url                = "url"
+	OtherNodes         = "othernodes"
+	PublicKeys         = "publickeys"
+	PrivateKeys        = "privatekeys"
+	Port               = "port"
+	Socket             = "socket"
 
 	GenerateKeys = "generate-keys"
 
-	BerkeleyDb = "berkeleydb"
-	UseGRPC = "grpc"
+	BerkeleyDb   = "berkeleydb"
+	UseGRPC      = "grpc"
 	GrpcJsonPort = "grpcport"
 
-	Tls = "tls"
-	TlsServerChain = "tlsserverchain"
-	TlsServerTrust = "tlsservertrust"
+	Tls             = "tls"
+	TlsServerChain  = "tlsserverchain"
+	TlsServerTrust  = "tlsservertrust"
 	TlsKnownServers = "tlsknownservers"
-	TlsClientCert = "tlsclientcert"
-	TlsServerCert = "tlsservercert"
+	TlsClientCert   = "tlsclientcert"
+	TlsServerCert   = "tlsservercert"
 	TlsKnownClients = "tlsknownclients"
-	TlsClientChain = "tlsclientchain"
-	TlsClientKey = "tlsclientkey"
-	TlsClientTrust = "tlsclienttrust"
-	TlsServerKey = "tlsserverkey"
+	TlsClientChain  = "tlsclientchain"
+	TlsClientKey    = "tlsclientkey"
+	TlsClientTrust  = "tlsclienttrust"
+	TlsServerKey    = "tlsserverkey"
 )
 
 // InitFlags initializes all supported command line flags.
@@ -45,7 +46,7 @@ func InitFlags() {
 	flag.String(GenerateKeys, "", "Generate a new keypair")
 	flag.String(Url, "", "The URL to advertise to other nodes (reachable by them)")
 	flag.Int(Port, -1, "The local port to listen on")
-	flag.String(WorkDir, ".", "The folder to put stuff in (default: .)")
+	flag.String(WorkDir, ".", "The folder to put stuff in ")
 	flag.String(Socket, "crux.ipc", "IPC socket to create for access to the Private API")
 	flag.String(OtherNodes, "", "\"Boot nodes\" to connect to to discover the network")
 	flag.String(PublicKeys, "", "Public keys hosted by this node")
@@ -55,6 +56,7 @@ func InitFlags() {
 		"Use Berkeley DB for working with an existing Constellation data store [experimental]")
 
 	flag.Int(Verbosity, 1, "Verbosity level of logs")
+	flag.Int(VerbosityShorthand, 1, "Verbosity level of logs (shorthand)")
 	flag.String(AlwaysSendTo, "", "List of public keys for nodes to send all transactions too")
 	flag.Bool(UseGRPC, true, "Use gRPC server")
 	flag.Bool(Tls, false, "Use TLS to secure HTTP communications")
@@ -65,7 +67,7 @@ func InitFlags() {
 	// storage not currently supported as we use LevelDB
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
-	viper.BindPFlags(pflag.CommandLine)  // Binding the flags to test the initial configuration
+	viper.BindPFlags(pflag.CommandLine) // Binding the flags to test the initial configuration
 }
 
 // Usage prints usage instructions to the console.
@@ -107,5 +109,3 @@ func GetString(key string) string {
 func GetStringSlice(key string) []string {
 	return viper.GetStringSlice(key)
 }
-
-

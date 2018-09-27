@@ -1,9 +1,9 @@
 package utils
 
 import (
-	"github.com/kevinburke/nacl"
-	"fmt"
 	"encoding/base64"
+	"fmt"
+	"github.com/kevinburke/nacl"
 )
 
 func ToKey(src []byte) (nacl.Key, error) {

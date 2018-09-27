@@ -1,15 +1,15 @@
 package server
 
 import (
-	"golang.org/x/net/context"
-	log "github.com/sirupsen/logrus"
 	"encoding/base64"
 	"encoding/hex"
-	"fmt"
-	"github.com/kevinburke/nacl"
 	"encoding/json"
-	"github.com/blk-io/crux/api"
+	"fmt"
 	"github.com/blk-io/chimera-api/chimera"
+	"github.com/blk-io/crux/api"
+	"github.com/kevinburke/nacl"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 type Server struct {
@@ -17,11 +17,11 @@ type Server struct {
 }
 
 func (s *Server) Version(ctx context.Context, in *chimera.ApiVersion) (*chimera.ApiVersion, error) {
-	return &chimera.ApiVersion{Version:apiVersion}, nil
+	return &chimera.ApiVersion{Version: apiVersion}, nil
 }
 
 func (s *Server) Upcheck(ctx context.Context, in *chimera.UpCheckResponse) (*chimera.UpCheckResponse, error) {
-	return &chimera.UpCheckResponse{Message:upCheckResponse}, nil
+	return &chimera.UpCheckResponse{Message: upCheckResponse}, nil
 }
 func (s *Server) Send(ctx context.Context, in *chimera.SendRequest) (*chimera.SendResponse, error) {
 	key, err := s.processSend(in.GetFrom(), in.GetTo(), &in.Payload)
@@ -36,9 +36,9 @@ func (s *Server) Send(ctx context.Context, in *chimera.SendRequest) (*chimera.Se
 
 func (s *Server) processSend(b64from string, b64recipients []string, payload *[]byte) ([]byte, error) {
 	log.WithFields(log.Fields{
-		"b64From" : b64from,
+		"b64From":       b64from,
 		"b64Recipients": b64recipients,
-		"payload": hex.EncodeToString(*payload),}).Debugf(
+		"payload":       hex.EncodeToString(*payload)}).Debugf(
 		"Processing send request")
 
 	sender, err := base64.StdEncoding.DecodeString(b64from)
@@ -87,7 +87,7 @@ func (s *Server) processReceive(b64Key []byte, b64To string) ([]byte, error) {
 
 func (s *Server) UpdatePartyInfo(ctx context.Context, in *chimera.PartyInfo) (*chimera.PartyInfoResponse, error) {
 	recipients := make(map[[nacl.KeySize]byte]string)
-	for url, key := range in.Recipients{
+	for url, key := range in.Recipients {
 		var as [32]byte
 		copy(as[:], key)
 		recipients[as] = url
@@ -96,12 +96,11 @@ func (s *Server) UpdatePartyInfo(ctx context.Context, in *chimera.PartyInfo) (*c
 	encoded := s.Enclave.GetEncodedPartyInfoGrpc()
 	var decodedPartyInfo chimera.PartyInfoResponse
 	err := json.Unmarshal(encoded, &decodedPartyInfo)
-	if err != nil{
+	if err != nil {
 		log.Errorf("Unmarshalling failed with %v", err)
 	}
 	return &chimera.PartyInfoResponse{Payload: decodedPartyInfo.Payload}, nil
 }
-
 
 func (s *Server) Push(ctx context.Context, in *chimera.PushPayload) (*chimera.PartyInfoResponse, error) {
 	sender := new([nacl.KeySize]byte)
@@ -112,11 +111,11 @@ func (s *Server) Push(ctx context.Context, in *chimera.PushPayload) (*chimera.Pa
 	copy((*recipientNonce)[:], in.Ep.ReciepientNonce)
 
 	encyptedPayload := api.EncryptedPayload{
-		Sender:sender,
-		CipherText:in.Ep.CipherText,
-		Nonce:nonce,
-		RecipientBoxes:in.Ep.ReciepientBoxes,
-		RecipientNonce:recipientNonce,
+		Sender:         sender,
+		CipherText:     in.Ep.CipherText,
+		Nonce:          nonce,
+		RecipientBoxes: in.Ep.ReciepientBoxes,
+		RecipientNonce: recipientNonce,
 	}
 
 	digestHash, err := s.Enclave.StorePayloadGrpc(encyptedPayload, in.Encoded)

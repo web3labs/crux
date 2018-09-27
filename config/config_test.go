@@ -1,8 +1,8 @@
 package config
 
 import (
-	"testing"
 	"reflect"
+	"testing"
 )
 
 const configFile = "config_testdata.conf"
@@ -38,27 +38,27 @@ func TestLoadConfig(t *testing.T) {
 	conf := AllSettings()
 
 	expected := map[string]interface{}{
-		Verbosity: 1,
-		AlwaysSendTo: []interface{}{},
-		TlsServerChain: []interface{}{},
-		Storage: "dir:storage",
-		WorkDir: "data",
-		Url: "http://127.0.0.1:9001/",
-		TlsServerTrust: "tofu",
-		PublicKeys: []interface{}{"foo.pub"},
-		OtherNodes: []interface{}{"http://127.0.0.1:9000/"},
-		TlsKnownServers:"tls-known-servers",
-		TlsClientCert: "tls-client-cert.pem",
-		PrivateKeys: []interface{}{"foo.key"},
-		TlsServerCert: "tls-server-cert.pem",
-		Tls: "strict",
+		Verbosity:       1,
+		AlwaysSendTo:    []interface{}{},
+		TlsServerChain:  []interface{}{},
+		Storage:         "dir:storage",
+		WorkDir:         "data",
+		Url:             "http://127.0.0.1:9001/",
+		TlsServerTrust:  "tofu",
+		PublicKeys:      []interface{}{"foo.pub"},
+		OtherNodes:      []interface{}{"http://127.0.0.1:9000/"},
+		TlsKnownServers: "tls-known-servers",
+		TlsClientCert:   "tls-client-cert.pem",
+		PrivateKeys:     []interface{}{"foo.key"},
+		TlsServerCert:   "tls-server-cert.pem",
+		Tls:             "strict",
 		TlsKnownClients: "tls-known-clients",
-		TlsClientChain: []interface{}{},
-		TlsClientKey: "tls-client-key.pem",
-		Socket: "constellation.ipc",
-		TlsClientTrust: "ca-or-tofu",
-		TlsServerKey: "tls-server-key.pem",
-		Port: 9001,
+		TlsClientChain:  []interface{}{},
+		TlsClientKey:    "tls-client-key.pem",
+		Socket:          "constellation.ipc",
+		TlsClientTrust:  "ca-or-tofu",
+		TlsServerKey:    "tls-server-key.pem",
+		Port:            9001,
 	}
 
 	verifyConfig(t, conf, expected)
@@ -69,7 +69,7 @@ func verifyConfig(t *testing.T, conf map[string]interface{}, expected map[string
 		//if conf[key] != value {
 		if actV, ok := conf[expK]; ok {
 			var eq bool
-			switch actV.(type) {  // we cannot use == for equality with []interface{}
+			switch actV.(type) { // we cannot use == for equality with []interface{}
 			case []interface{}:
 				eq = reflect.DeepEqual(actV, expV)
 			default:

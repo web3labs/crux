@@ -1,18 +1,18 @@
 package client
 
 import (
+	"encoding/base64"
+	"github.com/blk-io/chimera-api/chimera"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"github.com/blk-io/chimera-api/chimera"
-	"encoding/base64"
 	"reflect"
 	"testing"
-	)
+)
 
 const sender = "zSifTnkv5r4K67Dq304eVcM4FpxGfHLe1yTCBm0/7wg="
 const receiver = "I/EbshW61ykJ+qTivXPaKyQ5WmQDUFfMNGEBj2E2uUs="
-var payload = []byte("payload")
 
+var payload = []byte("payload")
 
 func TestIntegration(t *testing.T) {
 	var conn1 *grpc.ClientConn
@@ -47,12 +47,12 @@ func TestIntegration(t *testing.T) {
 	sendReqs := []chimera.SendRequest{
 		{
 			Payload: []byte("payload"),
-			From: sender,
-			To: []string{receiver},
+			From:    sender,
+			To:      []string{receiver},
 		},
 		{
 			Payload: []byte("test"),
-			To: []string{},
+			To:      []string{},
 		},
 		{
 			Payload: []byte("blk-io crux"),
@@ -61,18 +61,18 @@ func TestIntegration(t *testing.T) {
 
 	sendResponse := chimera.SendResponse{}
 	for _, sendReq := range sendReqs {
-		sendResp, err:= c1.Send(context.Background(), &sendReq)
+		sendResp, err := c1.Send(context.Background(), &sendReq)
 		if err != nil {
 			t.Fatalf("gRPC send failed with %s", err)
 		}
-		sendResponse = chimera.SendResponse{Key:sendResp.Key}
+		sendResponse = chimera.SendResponse{Key: sendResp.Key}
 		t.Logf("The response for Send request is: %s", base64.StdEncoding.EncodeToString(sendResponse.Key))
 
-		recResp, err:= c1.Receive(context.Background(), &chimera.ReceiveRequest{Key:sendResponse.Key, To:receiver})
+		recResp, err := c1.Receive(context.Background(), &chimera.ReceiveRequest{Key: sendResponse.Key, To: receiver})
 		if err != nil {
 			t.Fatalf("gRPC receive failed with %s", err)
 		}
-		receiveResponse := chimera.ReceiveResponse{Payload:recResp.Payload}
+		receiveResponse := chimera.ReceiveResponse{Payload: recResp.Payload}
 		if !reflect.DeepEqual(receiveResponse.Payload, sendReq.Payload) {
 			t.Fatalf("handler returned unexpected response: %v, expected: %v\n", receiveResponse.Payload, sendReq.Payload)
 		} else {

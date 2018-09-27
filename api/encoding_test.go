@@ -1,19 +1,19 @@
 package api
 
 import (
+	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
 	"reflect"
 	"testing"
-	"github.com/kevinburke/nacl"
-	"github.com/blk-io/crux/utils"
 )
 
 func TestEncodePayload(t *testing.T) {
 
 	epl := EncryptedPayload{
-		Sender: nacl.NewKey(),
-		CipherText: []byte("C1ph3r T3xt"),
-		Nonce: nacl.NewNonce(),
-		RecipientBoxes: [][]byte{ []byte("B0x1"), []byte("B0x2") },
+		Sender:         nacl.NewKey(),
+		CipherText:     []byte("C1ph3r T3xt"),
+		Nonce:          nacl.NewNonce(),
+		RecipientBoxes: [][]byte{[]byte("B0x1"), []byte("B0x2")},
 		RecipientNonce: nacl.NewNonce(),
 	}
 
@@ -29,17 +29,17 @@ func TestEncodePayloadWithRecipients(t *testing.T) {
 
 	epls := []EncryptedPayload{
 		{
-			Sender: nacl.NewKey(),
-			CipherText: []byte("C1ph3r T3xt1"),
-			Nonce: nacl.NewNonce(),
-			RecipientBoxes: [][]byte{ []byte("B0x1"), []byte("B0x2"), []byte("B0x3") },
+			Sender:         nacl.NewKey(),
+			CipherText:     []byte("C1ph3r T3xt1"),
+			Nonce:          nacl.NewNonce(),
+			RecipientBoxes: [][]byte{[]byte("B0x1"), []byte("B0x2"), []byte("B0x3")},
 			RecipientNonce: nacl.NewNonce(),
 		},
 		{
-			Sender: nacl.NewKey(),
-			CipherText: []byte("C1ph3r T3xt2"),
-			Nonce: nacl.NewNonce(),
-			RecipientBoxes: [][]byte{ []byte("B0x1") },
+			Sender:         nacl.NewKey(),
+			CipherText:     []byte("C1ph3r T3xt2"),
+			Nonce:          nacl.NewNonce(),
+			RecipientBoxes: [][]byte{[]byte("B0x1")},
 			RecipientNonce: nacl.NewNonce(),
 		},
 	}
@@ -67,7 +67,6 @@ func TestEncodePayloadWithRecipients(t *testing.T) {
 		}
 	}
 }
-
 
 func TestEncodePartyInfo(t *testing.T) {
 

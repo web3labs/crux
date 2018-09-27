@@ -2,7 +2,6 @@
 
 <a href="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/" target="_blank" rel="noopener"><img title="Quorum Slack" src="https://clh7rniov2.execute-api.us-east-1.amazonaws.com/Express/badge.svg" alt="Quorum Slack" /></a>
 <a href="https://travis-ci.org/blk-io/crux/"><img title="Build Status" src="https://travis-ci.org/blk-io/crux.svg?branch=master" alt="Build Status" /></a>
-<a href="https://goreportcard.com/report/github.com/blk-io/crux"><img title="Go Report Card" src="https://goreportcard.com/badge/github.com/blk-io/crux" alt="Go Report Card" /></a>
 
 Data privacy for Quorum. 
 

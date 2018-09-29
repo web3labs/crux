@@ -94,25 +94,26 @@ make setup && make
 ./bin/crux
 
 Usage of ./bin/crux:
-      crux.config              Optional config file
-      --alwayssendto string    List of public keys for nodes to send all transactions too
-      --berkeleydb             Use Berkeley DB for working with an existing Constellation data store [experimental]
-      --generate-keys string   Generate a new keypair
-      --grpc                   Use gRPC server (default true)
-      --grpcport int           The local port to listen on for JSON extensions of gRPC (default -1)
-      --othernodes string      "Boot nodes" to connect to to discover the network
-      --port int               The local port to listen on (default -1)
-      --privatekeys string     Private keys hosted by this node
-      --publickeys string      Public keys hosted by this node
-      --socket string          IPC socket to create for access to the Private API (default "crux.ipc")
-      --storage string         Database storage file name (default "crux.db")
-      --tls                    Use TLS to secure HTTP communications
-      --tlsservercert string   The server certificate to be used
-      --tlsserverkey string    The server private key
-      --url string             The URL to advertise to other nodes (reachable by them)
-  -v, --v int                  Verbosity level of logs (shorthand) (default 1)
-      --verbosity int          Verbosity level of logs (default 1)
-      --workdir string         The folder to put stuff in (default: .) (default ".")
+      crux.config               Optional config file
+      --alwayssendto string     List of public keys for nodes to send all transactions too
+      --berkeleydb              Use Berkeley DB for working with an existing Constellation data store [experimental]
+      --generate-keys string    Generate a new keypair
+      --grpc                    Use gRPC server (default true)
+      --grpcport int            The local port to listen on for JSON extensions of gRPC (default -1)
+      --networkinterface string The network interface to bind the server to (default "localhost")
+      --othernodes string       "Boot nodes" to connect to to discover the network
+      --port int                The local port to listen on (default -1)
+      --privatekeys string      Private keys hosted by this node
+      --publickeys string       Public keys hosted by this node
+      --socket string           IPC socket to create for access to the Private API (default "crux.ipc")
+      --storage string          Database storage file name (default "crux.db")
+      --tls                     Use TLS to secure HTTP communications
+      --tlsservercert string    The server certificate to be used
+      --tlsserverkey string     The server private key
+      --url string              The URL to advertise to other nodes (reachable by them)
+  -v, --v int                   Verbosity level of logs (shorthand) (default 1)
+      --verbosity int           Verbosity level of logs (default 1)
+      --workdir string          The folder to put stuff in (default: .) (default ".")
 ``` 
 
 ## How does it work?

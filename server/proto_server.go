@@ -13,7 +13,7 @@ import (
 	"net/http"
 )
 
-func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {
+func (tm *TransactionManager) startRpcServer(networkInterface string, port int, grpcJsonPort int, ipcPath string, tls bool, certFile, keyFile string) error {
 	lis, err := utils.CreateIpcSocket(ipcPath)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -28,15 +28,15 @@ func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath
 	go func() error {
 		var err error
 		if tls {
-			err = tm.startRestServerTLS(port, certFile, keyFile, certFile)
+			err = tm.startRestServerTLS(networkInterface, port, certFile, keyFile, certFile)
 		} else {
-			err = tm.startRestServer(port)
+			err = tm.startRestServer(networkInterface, port)
 		}
 		if grpcJsonPort != -1 {
 			if tls {
-				err = tm.startJsonServerTLS(port, grpcJsonPort, certFile, keyFile, certFile)
+				err = tm.startJsonServerTLS(networkInterface, port, grpcJsonPort, certFile, keyFile, certFile)
 			} else {
-				err = tm.startJsonServer(port, grpcJsonPort)
+				err = tm.startJsonServer(networkInterface, port, grpcJsonPort)
 			}
 		}
 		if err != nil {
@@ -48,14 +48,14 @@ func (tm *TransactionManager) startRpcServer(port int, grpcJsonPort int, ipcPath
 	return err
 }
 
-func (tm *TransactionManager) startJsonServer(port int, grpcJsonPort int) error {
-	address := fmt.Sprintf("%s:%d", "localhost", grpcJsonPort)
+func (tm *TransactionManager) startJsonServer(networkInterface string, port int, grpcJsonPort int) error {
+	address := fmt.Sprintf("%s:%d", networkInterface, grpcJsonPort)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	mux := runtime.NewServeMux()
 	opts := []grpc.DialOption{grpc.WithInsecure()}
-	err := chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), opts)
+	err := chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", networkInterface, port), opts)
 	if err != nil {
 		return fmt.Errorf("could not register service: %s", err)
 	}
@@ -67,8 +67,8 @@ func (tm *TransactionManager) startJsonServer(port int, grpcJsonPort int) error 
 	return nil
 }
 
-func (tm *TransactionManager) startRestServer(port int) error {
-	grpcAddress := fmt.Sprintf(":%d", port)
+func (tm *TransactionManager) startRestServer(networkInterface string, port int) error {
+	grpcAddress := fmt.Sprintf("%s:%d", networkInterface, port)
 	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		panic(err)
@@ -82,14 +82,14 @@ func (tm *TransactionManager) startRestServer(port int) error {
 	return nil
 }
 
-func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, certFile, keyFile, ca string) error {
-	address := fmt.Sprintf("%s:%d", "localhost", grpcJsonPort)
+func (tm *TransactionManager) startJsonServerTLS(networkInterface string, port int, grpcJsonPort int, certFile, keyFile, ca string) error {
+	address := fmt.Sprintf("%s:%d", networkInterface, grpcJsonPort)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	mux := runtime.NewServeMux()
 	creds, err := credentials.NewServerTLSFromFile(certFile, keyFile)
-	err = chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", "localhost", port), []grpc.DialOption{grpc.WithTransportCredentials(creds)})
+	err = chimera.RegisterClientHandlerFromEndpoint(ctx, mux, fmt.Sprintf("%s:%d", networkInterface, port), []grpc.DialOption{grpc.WithTransportCredentials(creds)})
 	if err != nil {
 		log.Fatalf("could not register service Ping: %s", err)
 		return err
@@ -99,8 +99,8 @@ func (tm *TransactionManager) startJsonServerTLS(port int, grpcJsonPort int, cer
 	return nil
 }
 
-func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile, ca string) error {
-	grpcAddress := fmt.Sprintf("%s:%d", "localhost", port)
+func (tm *TransactionManager) startRestServerTLS(networkInterface string, port int, certFile, keyFile, ca string) error {
+	grpcAddress := fmt.Sprintf("%s:%d", networkInterface, port)
 	lis, err := net.Listen("tcp", grpcAddress)
 	if err != nil {
 		log.Fatalf("failed to start gRPC REST server: %s", err)
@@ -119,8 +119,8 @@ func (tm *TransactionManager) startRestServerTLS(port int, certFile, keyFile, ca
 	return nil
 }
 
-func GetFreePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+func GetFreePort(networkInterface string) (int, error) {
+	addr, err := net.ResolveTCPAddr("tcp", networkInterface + ":0")
 	if err != nil {
 		return 0, err
 	}

@@ -27,6 +27,7 @@ const (
 	BerkeleyDb   = "berkeleydb"
 	UseGRPC      = "grpc"
 	GrpcJsonPort = "grpcport"
+	NetworkInterface = "networkinterface"
 
 	Tls             = "tls"
 	TlsServerChain  = "tlsserverchain"
@@ -63,6 +64,7 @@ func InitFlags() {
 	flag.String(TlsServerCert, "", "The server certificate to be used")
 	flag.String(TlsServerKey, "", "The server private key")
 	flag.Int(GrpcJsonPort, -1, "The local port to listen on for JSON extensions of gRPC")
+	flag.String(NetworkInterface, "localhost", "The network interface to bind the server to")
 
 	// storage not currently supported as we use LevelDB
 

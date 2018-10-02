@@ -139,7 +139,8 @@ func main() {
 		tlsKeyFile = path.Join(workDir, servKey)
 	}
 	grpcJsonport := config.GetInt(config.GrpcJsonPort)
-	_, err = server.Init(enc, port, ipcPath, grpc, grpcJsonport, tls, tlsCertFile, tlsKeyFile)
+	networkInterface := config.GetString(config.NetworkInterface)
+	_, err = server.Init(enc, networkInterface, port, ipcPath, grpc, grpcJsonport, tls, tlsCertFile, tlsKeyFile)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}

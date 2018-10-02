@@ -75,20 +75,20 @@ func requestLogger(handler http.Handler) http.Handler {
 }
 
 // Init initializes a new TransactionManager instance.
-func Init(enc Enclave, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
+func Init(enc Enclave, networkInterface string, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
 	tm := TransactionManager{Enclave: enc}
 	var err error
 	if grpc == true {
-		err = tm.startRpcServer(port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
+		err = tm.startRpcServer(networkInterface, port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
 
 	} else {
-		err = tm.startHttpserver(port, ipcPath, tls, certFile, keyFile)
+		err = tm.startHttpserver(networkInterface, port, ipcPath, tls, certFile, keyFile)
 	}
 
 	return tm, err
 }
 
-func (tm *TransactionManager) startHttpserver(port int, ipcPath string, tls bool, certFile, keyFile string) error {
+func (tm *TransactionManager) startHttpserver(networkInterface string, port int, ipcPath string, tls bool, certFile, keyFile string) error {
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
 	httpServer.HandleFunc(version, tm.version)
@@ -96,7 +96,7 @@ func (tm *TransactionManager) startHttpserver(port int, ipcPath string, tls bool
 	httpServer.HandleFunc(resend, tm.resend)
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
-	serverUrl := "localhost:" + strconv.Itoa(port)
+	serverUrl := networkInterface + ":" + strconv.Itoa(port)
 	if tls {
 		err := CheckCertFiles(certFile, keyFile)
 		if err != nil {

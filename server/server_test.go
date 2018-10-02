@@ -151,7 +151,7 @@ func TestGRPCSend(t *testing.T) {
 	}
 	expected := chimera.SendResponse{Key: payload}
 
-	freePort, err := GetFreePort()
+	freePort, err := GetFreePort("localhost")
 	if err != nil {
 		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
 	}
@@ -216,7 +216,7 @@ func TestGRPCReceive(t *testing.T) {
 		},
 	}
 	expected := chimera.ReceiveResponse{Payload: payload}
-	freePort, err := GetFreePort()
+	freePort, err := GetFreePort("localhost")
 	if err != nil {
 		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
 	}
@@ -510,7 +510,7 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 
 func InitgRPCServer(t *testing.T, grpc bool, port int) string {
 	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
-	tm, err := Init(&MockEnclave{}, port, ipcPath, grpc, -1, false, "", "")
+	tm, err := Init(&MockEnclave{}, "localhost", port, ipcPath, grpc, -1, false, "", "")
 
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
@@ -554,7 +554,7 @@ func TestInit(t *testing.T) {
 		t.Error(err)
 	}
 	certFile, keyFile := "../enclave/testdata/cert/server.crt", "../enclave/testdata/cert/server.key"
-	tm, err := Init(enc, 9001, ipcPath, false, -1, true, certFile, keyFile)
+	tm, err := Init(enc, "localhost", 9001, ipcPath, false, -1, true, certFile, keyFile)
 	if err != nil {
 		t.Errorf("Error starting server: %v\n", err)
 	}

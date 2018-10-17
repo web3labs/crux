@@ -139,6 +139,14 @@ func (s *SecureEnclave) store(
 	senderPubKey, senderPrivKey nacl.Key,
 	recipients [][]byte) ([]byte, error) {
 
+	var toSelf bool
+	if len(recipients) == 0 {
+		toSelf = true
+		recipients = [][]byte{(*s.selfPubKey)[:]}
+	} else {
+		toSelf = false
+	}
+	
 	epl, masterKey := createEncryptedPayload(message, senderPubKey, recipients)
 
 	for i, recipient := range recipients {
@@ -161,14 +169,6 @@ func (s *SecureEnclave) store(
 		sealedBox := sealPayload(epl.RecipientNonce, masterKey, sharedKey)
 
 		epl.RecipientBoxes[i] = sealedBox
-	}
-
-	var toSelf bool
-	if len(recipients) == 0 {
-		toSelf = true
-		recipients = [][]byte{(*s.selfPubKey)[:]}
-	} else {
-		toSelf = false
 	}
 
 	// store locally

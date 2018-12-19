@@ -52,6 +52,8 @@ func main() {
 		level = log.InfoLevel
 	case 3:
 		level = log.DebugLevel
+	default:
+		level = log.TraceLevel
 	}
 	log.SetLevel(level)
 

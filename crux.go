@@ -50,7 +50,7 @@ func main() {
 		level = log.WarnLevel
 	case 2:
 		level = log.InfoLevel
-	case 3:
+	default:
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)

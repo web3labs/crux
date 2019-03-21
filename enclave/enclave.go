@@ -146,7 +146,7 @@ func (s *SecureEnclave) store(
 	} else {
 		toSelf = false
 	}
-	
+
 	epl, masterKey := createEncryptedPayload(message, senderPubKey, recipients)
 
 	for i, recipient := range recipients {
@@ -170,18 +170,6 @@ func (s *SecureEnclave) store(
 
 		epl.RecipientBoxes[i] = sealedBox
 	}
-
-	// store locally
-	recipientKey, err := utils.ToKey(recipients[0])
-	if err != nil {
-		log.WithField("recipientKey", recipientKey).Errorf(
-			"Unable to load recipient, %v", err)
-	}
-
-	sharedKey := s.resolveSharedKey(senderPrivKey, senderPubKey, recipientKey)
-
-	sealedBox := sealPayload(epl.RecipientNonce, masterKey, sharedKey)
-	epl.RecipientBoxes = [][]byte{sealedBox}
 
 	encodedEpl := api.EncodePayloadWithRecipients(epl, recipients)
 	digest, err := s.storePayload(epl, encodedEpl)

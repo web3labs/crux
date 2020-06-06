@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant Client
+    participant Quorum
+    participant Crux
+    participant Remote Crux
+
+Client->>Quorum: send(transaction, privateFor)
+Quorum->>Crux: send(transaction, privateFor)
+Crux->>Remote Crux: push(encryptedPayload)
+Crux-->>Quorum: sendResponse(transactionHash)

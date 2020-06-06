@@ -28,6 +28,8 @@ clean:
 	$Q rm -rf bin .GOPATH
 
 test: .GOPATH/.ok
+	$Q ./bin/crux --url=http://127.0.0.1:9020/ --port=9020 --workdir=test/test1 --publickeys=testdata/key.pub --privatekeys=testdata/key &
+	$Q ./bin/crux --url=http://127.0.0.1:9025/ --port=9025 --workdir=test/test2 --publickeys=testdata/rcpt1.pub --privatekeys=testdata/rcpt1 &
 	$Q go test $(if $V,-v) -i -race $(allpackages) # install -race libs to speed up next run
 ifndef CI
 	$Q go vet $(allpackages)
@@ -38,6 +40,7 @@ else
 	$Q ( GODEBUG=cgocheck=2 go test -v -race $(allpackages); echo $$? ) | \
 	    tee .GOPATH/test/output.txt | sed '$$ d'; exit $$(tail -1 .GOPATH/test/output.txt)
 endif
+	$Q pkill crux
 
 list: .GOPATH/.ok
 	@echo $(allpackages)
@@ -109,9 +112,8 @@ Q := $(if $V,,@)
 
 .PHONY: bin/gocovmerge bin/goimports
 bin/gocovmerge: .GOPATH/.ok
-	@test -d ./vendor/github.com/wadey/gocovmerge || \
+	@test -f ./bin/gocovmerge || \
 	    { echo "Vendored gocovmerge not found, try running 'make setup'..."; exit 1; }
-	$Q go install $(IMPORT_PATH)/vendor/github.com/wadey/gocovmerge
 bin/goimports: .GOPATH/.ok
 	@test -d ./vendor/golang.org/x/tools/cmd/goimports || \
 	    { echo "Vendored goimports not found, try running 'make setup'..."; exit 1; }

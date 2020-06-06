@@ -1,15 +1,24 @@
 package server
 
 import (
-	"testing"
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"github.com/blk-io/chimera-api/chimera"
+	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/enclave"
+	"github.com/blk-io/crux/storage"
+	"github.com/kevinburke/nacl"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"github.com/blk-io/crux/api"
-	"encoding/json"
-	"encoding/base64"
-	"bytes"
+	"path"
 	"reflect"
-	"github.com/kevinburke/nacl"
+	"testing"
 )
 
 const sender = "BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo="
@@ -18,40 +27,53 @@ const receiver = "QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc="
 var payload = []byte("payload")
 var encodedPayload = base64.StdEncoding.EncodeToString(payload)
 
-type MockEnclave struct {}
+type MockEnclave struct{}
 
-func (s* MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
+func (s *MockEnclave) Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error) {
 	return *message, nil
 }
 
-func (s* MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
+func (s *MockEnclave) StorePayload(encoded []byte) ([]byte, error) {
+	return encoded, nil
+}
+func (s *MockEnclave) StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error) {
 	return encoded, nil
 }
 
-func (s* MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
+func (s *MockEnclave) Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error) {
 	return *digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
+func (s *MockEnclave) RetrieveDefault(digestHash *[]byte) ([]byte, error) {
 	return *digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
+func (s *MockEnclave) RetrieveFor(digestHash *[]byte, reqRecipient *[]byte) (*[]byte, error) {
 	return digestHash, nil
 }
 
-func (s* MockEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
+func (s *MockEnclave) RetrieveAllFor(reqRecipient *[]byte) error {
 	return nil
 }
 
-func (s* MockEnclave) Delete(digestHash *[]byte) error {
+func (s *MockEnclave) Delete(digestHash *[]byte) error {
 	return nil
 }
 
-func (s* MockEnclave) UpdatePartyInfo(encoded []byte) {}
+func (s *MockEnclave) UpdatePartyInfo(encoded []byte) {}
 
-func (s* MockEnclave) GetEncodedPartyInfo() []byte {
+func (s *MockEnclave) UpdatePartyInfoGrpc(string, map[[nacl.KeySize]byte]string, map[string]bool) {}
+
+func (s *MockEnclave) GetEncodedPartyInfo() []byte {
 	return payload
+}
+
+func (s *MockEnclave) GetEncodedPartyInfoGrpc() []byte {
+	return payload
+}
+
+func (s *MockEnclave) GetPartyInfo() (string, map[[nacl.KeySize]byte]string, map[string]bool) {
+	return "", nil, nil
 }
 
 func TestUpcheck(t *testing.T) {
@@ -90,12 +112,12 @@ func TestSend(t *testing.T) {
 	sendReqs := []api.SendRequest{
 		{
 			Payload: encodedPayload,
-			From: sender,
-			To: []string{receiver},
+			From:    sender,
+			To:      []string{receiver},
 		},
 		{
 			Payload: encodedPayload,
-			To: []string{},
+			To:      []string{},
 		},
 		{
 			Payload: encodedPayload,
@@ -112,6 +134,49 @@ func TestSend(t *testing.T) {
 	}
 }
 
+func TestGRPCSend(t *testing.T) {
+	sendReqs := []chimera.SendRequest{
+		{
+			Payload: payload,
+			From:    sender,
+			To:      []string{receiver},
+		},
+		{
+			Payload: payload,
+			To:      []string{},
+		},
+		{
+			Payload: payload,
+		},
+	}
+	expected := chimera.SendResponse{Key: payload}
+
+	freePort, err := GetFreePort("localhost")
+	if err != nil {
+		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+	}
+	ipcPath := InitgRPCServer(t, true, freePort)
+
+	var conn *grpc.ClientConn
+	conn, err = grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Connection to gRPC server failed with error %s", err)
+	}
+	defer conn.Close()
+	c := chimera.NewClientClient(conn)
+
+	for _, sendReq := range sendReqs {
+		resp, err := c.Send(context.Background(), &sendReq)
+		if err != nil {
+			t.Fatalf("gRPC send failed with %s", err)
+		}
+		response := chimera.SendResponse{Key: resp.Key}
+		if !reflect.DeepEqual(response, expected) {
+			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+		}
+	}
+}
+
 func TestSendRaw(t *testing.T) {
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 
@@ -119,9 +184,9 @@ func TestSendRaw(t *testing.T) {
 	headers[hFrom] = []string{sender}
 	headers[hTo] = []string{receiver}
 
-	// Uncomment the below for Quorum v2.0.2 onwards
-	//runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
-	runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
+	runRawHandlerTest(t, headers, payload, []byte(encodedPayload), sendRaw, tm.sendRaw)
+	// Uncomment the below for Quorum v2.0.1 or below
+	//runRawHandlerTest(t, headers, payload, payload, sendRaw, tm.sendRaw)
 }
 
 func TestReceive(t *testing.T) {
@@ -129,7 +194,7 @@ func TestReceive(t *testing.T) {
 	receiveReqs := []api.ReceiveRequest{
 		{
 			Key: encodedPayload,
-			To: receiver,
+			To:  receiver,
 		},
 	}
 
@@ -143,6 +208,39 @@ func TestReceive(t *testing.T) {
 	}
 }
 
+func TestGRPCReceive(t *testing.T) {
+	receiveReqs := []chimera.ReceiveRequest{
+		{
+			Key: payload,
+			To:  receiver,
+		},
+	}
+	expected := chimera.ReceiveResponse{Payload: payload}
+	freePort, err := GetFreePort("localhost")
+	if err != nil {
+		log.Fatalf("failed to find a free port to start gRPC REST server: %s", err)
+	}
+	ipcPath := InitgRPCServer(t, true, freePort)
+	var conn *grpc.ClientConn
+	conn, err = grpc.Dial(fmt.Sprintf("passthrough:///unix://%s", ipcPath), grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("Connection to gRPC server failed with error %s", err)
+	}
+	defer conn.Close()
+	c := chimera.NewClientClient(conn)
+
+	for _, receiveReq := range receiveReqs {
+		resp, err := c.Receive(context.Background(), &receiveReq)
+		if err != nil {
+			t.Fatalf("gRPC receive failed with %s", err)
+		}
+		response := chimera.ReceiveResponse{Payload: resp.Payload}
+		if !reflect.DeepEqual(response, expected) {
+			t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
+		}
+	}
+}
+
 func TestReceivedRaw(t *testing.T) {
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 
@@ -153,24 +251,32 @@ func TestReceivedRaw(t *testing.T) {
 	runRawHandlerTest(t, headers, payload, payload, receiveRaw, tm.receiveRaw)
 }
 
+func TestNilKeyReceivedRaw(t *testing.T) {
+	tm := TransactionManager{Enclave: &MockEnclave{}}
+
+	headers := make(http.Header)
+	headers[hKey] = []string{""}
+	headers[hTo] = []string{receiver}
+
+	runFailingRawHandlerTest(t, headers, payload, payload, receiveRaw, tm.receiveRaw)
+}
+
 func TestPush(t *testing.T) {
 
 	epl := api.EncryptedPayload{
-		Sender: nacl.NewKey(),
-		CipherText: []byte(payload),
-		Nonce: nacl.NewNonce(),
+		Sender:         nacl.NewKey(),
+		CipherText:     []byte(payload),
+		Nonce:          nacl.NewNonce(),
 		RecipientBoxes: [][]byte{[]byte(payload)},
 		RecipientNonce: nacl.NewNonce(),
 	}
 	var recipients [][]byte
 
 	encoded := api.EncodePayloadWithRecipients(epl, recipients)
-
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	rr := httptest.NewRecorder()
 	tm := TransactionManager{Enclave: &MockEnclave{}}
 
@@ -239,6 +345,32 @@ func runJsonHandlerTest(
 		t.Errorf("handler returned unexpected response: %v, expected: %v\n", response, expected)
 	}
 }
+func runFailingRawHandlerTest(
+	t *testing.T,
+	headers http.Header,
+	payload, expected []byte,
+	url string,
+	handlerFunc http.HandlerFunc) {
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for k, v := range headers {
+		req.Header.Set(k, v[0])
+	}
+
+	rr := httptest.NewRecorder()
+
+	handler := http.HandlerFunc(handlerFunc)
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status == http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+}
 
 func runRawHandlerTest(
 	t *testing.T,
@@ -273,12 +405,11 @@ func runRawHandlerTest(
 	}
 }
 
-
 func TestResendIndividual(t *testing.T) {
 	resendReq := api.ResendRequest{
-		Type:       "individual",
-		PublicKey:  sender,
-		Key:        encodedPayload,
+		Type:      "individual",
+		PublicKey: sender,
+		Key:       encodedPayload,
 	}
 
 	body := runResendTest(t, resendReq)
@@ -291,8 +422,8 @@ func TestResendIndividual(t *testing.T) {
 
 func TestResendAll(t *testing.T) {
 	resendReq := api.ResendRequest{
-		Type:       "all",
-		PublicKey:  sender,
+		Type:      "all",
+		PublicKey: sender,
 	}
 
 	body := runResendTest(t, resendReq)
@@ -341,7 +472,7 @@ func TestPartyInfo(t *testing.T) {
 		api.InitPartyInfo(
 			"http://localhost:8000",
 			[]string{"http://localhost:8001"},
-			http.DefaultClient),
+			http.DefaultClient, false),
 	}
 
 	for _, pi := range partyInfos {
@@ -350,8 +481,11 @@ func TestPartyInfo(t *testing.T) {
 }
 
 func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
-	encoded := api.EncodePartyInfo(pi)
-
+	encodedPartyInfo := api.EncodePartyInfo(pi)
+	encoded, err := json.Marshal(api.PartyInfoResponse{Payload: encodedPartyInfo})
+	if err != nil {
+		t.Errorf("Marshalling failed %v", err)
+	}
 	req, err := http.NewRequest("POST", push, bytes.NewBuffer(encoded))
 	if err != nil {
 		t.Fatal(err)
@@ -372,4 +506,57 @@ func testRunPartyInfo(t *testing.T, pi api.PartyInfo) {
 		t.Errorf("handler returned unexpected body: got %v wanted %v\n",
 			rr.Body.Bytes(), payload)
 	}
+}
+
+func InitgRPCServer(t *testing.T, grpc bool, port int) string {
+	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
+	tm, err := Init(&MockEnclave{}, "localhost", port, ipcPath, grpc, -1, false, "", "")
+
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
+	return ipcPath
+}
+
+func TestInit(t *testing.T) {
+	dbPath, err := ioutil.TempDir("", "TestInit")
+	if err != nil {
+		t.Error(err)
+	}
+	db, err := storage.InitLevelDb(dbPath)
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	pubKeyFiles := []string{"key.pub"}
+	privKeyFiles := []string{"key"}
+
+	for i, keyFile := range privKeyFiles {
+		privKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
+	}
+
+	for i, keyFile := range pubKeyFiles {
+		pubKeyFiles[i] = path.Join("../enclave/testdata", keyFile)
+	}
+
+	key := []nacl.Key{nacl.NewKey()}
+
+	pi := api.CreatePartyInfo(
+		"http://localhost:9000",
+		[]string{"http://localhost:9001"},
+		key,
+		http.DefaultClient)
+
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, false)
+
+	ipcPath, err := ioutil.TempDir("", "TestInitIpc")
+	if err != nil {
+		t.Error(err)
+	}
+	certFile, keyFile := "../enclave/testdata/cert/server.crt", "../enclave/testdata/cert/server.key"
+	tm, err := Init(enc, "localhost", 9001, ipcPath, false, -1, true, certFile, keyFile)
+	if err != nil {
+		t.Errorf("Error starting server: %v\n", err)
+	}
+	runSimpleGetRequest(t, upCheck, upCheckResponse, tm.upcheck)
 }

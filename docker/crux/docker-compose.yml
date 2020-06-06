@@ -1,0 +1,29 @@
+version: "3.4"
+services:
+  node1:
+    image: blk.io/quorum/crux
+    build:
+      context: .
+    container_name: crux1
+    ports:
+      - 9001:9000
+    environment:
+      - CRUX_PUB=BULeR8JyUWhiuuCMU/HLA0Q5pzkYT+cHII3ZKBey3Bo=
+      - CRUX_PRIV={"data":{"bytes":"Wl+xSyXVuuqzpvznOS7dOobhcn4C5auxkFRi7yLtgtA="},"type":"unlocked"}
+      - OTHER_NODES=http://node2:9000/
+      - OWN_URL=node1
+      - PORT=9000
+
+  node2:
+    image: blk.io/quorum/crux
+    build:
+      context: .
+    container_name: crux2
+    ports:
+      - 9002:9000
+    environment:
+      - CRUX_PUB=QfeDAys9MPDs2XHExtc84jKGHxZg/aj52DTh0vtA3Xc=
+      - CRUX_PRIV={"data":{"bytes":"nDFwJNHSiT1gNzKBy9WJvMhmYRkW3TzFUmPsNzR6oFk="},"type":"unlocked"}
+      - OTHER_NODES=http://node1:9000/
+      - OWN_URL=node2
+      - PORT=9000

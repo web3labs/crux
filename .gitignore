@@ -8,4 +8,6 @@
 /.GOPATH
 /bin
 /vendor
+/test/test1
+/test/test2
 

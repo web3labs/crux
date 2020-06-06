@@ -2,6 +2,10 @@ package enclave
 
 import (
 	"bytes"
+	"github.com/blk-io/crux/api"
+	"github.com/blk-io/crux/storage"
+	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -9,17 +13,13 @@ import (
 	"sync"
 	"testing"
 	"time"
-	"github.com/blk-io/crux/storage"
-	"github.com/blk-io/crux/api"
-	"github.com/blk-io/crux/utils"
-	"github.com/kevinburke/nacl"
 )
 
 var message = []byte("Test message")
 
 type MockClient struct {
 	serviceMu sync.Mutex
-	requests [][]byte
+	requests  [][]byte
 }
 
 func (c *MockClient) Do(req *http.Request) (*http.Response, error) {
@@ -58,7 +58,7 @@ func initEnclave(
 		[]string{"testdata/key.pub"},
 		[]string{"testdata/key"},
 		pi,
-		client)
+		client, false)
 }
 
 func initDefaultEnclave(t *testing.T,
@@ -68,7 +68,7 @@ func initDefaultEnclave(t *testing.T,
 	client = &MockClient{}
 	pi := api.InitPartyInfo(
 		"http://localhost:8000",
-		[]string{"http://localhost:8001"}, client)
+		[]string{"http://localhost:8001"}, client, false)
 
 	return initEnclave(t, dbPath, pi, client)
 }
@@ -111,7 +111,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -146,7 +146,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 		[]string{"testdata/rcpt1.pub"},
 		[]string{"testdata/rcpt1"},
 		pi,
-		client)
+		client, false)
 
 	var digest2 []byte
 	digest2, err = enc2.StorePayload(propagatedPl)
@@ -162,7 +162,7 @@ func TestStoreAndRetrieve(t *testing.T) {
 
 	if !bytes.Equal(message, returned2) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -189,7 +189,7 @@ func TestStoreAndRetrieveSelf(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -270,7 +270,7 @@ func TestRetrieveNotAuthorised(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -297,7 +297,7 @@ func TestDelete(t *testing.T) {
 
 	if !bytes.Equal(message, returned) {
 		t.Errorf(
-			"Retrieved message is not the same as original:\n" +
+			"Retrieved message is not the same as original:\n"+
 				"Original: %v\nRetrieved: %v",
 			message, returned)
 	}
@@ -445,7 +445,7 @@ func TestDoKeyGeneration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = loadPrivKeys([]string{keyFiles})
+	_, err = loadPrivKeys([]string{keyFiles + ".key"})
 	if err != nil {
 		t.Fatal(err)
 	}

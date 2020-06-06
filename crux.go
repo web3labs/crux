@@ -1,16 +1,16 @@
 package main
 
 import (
-	"os"
-	"path"
-	"net/http"
-	"strings"
 	"github.com/blk-io/crux/api"
 	"github.com/blk-io/crux/config"
 	"github.com/blk-io/crux/enclave"
 	"github.com/blk-io/crux/server"
 	"github.com/blk-io/crux/storage"
 	log "github.com/sirupsen/logrus"
+	"net/http"
+	"os"
+	"path"
+	"strings"
 	"time"
 )
 
@@ -25,7 +25,7 @@ func main() {
 
 	for _, arg := range args[1:] {
 		if strings.Contains(arg, ".conf") {
-			err := config.LoadConfig(os.Args[0])
+			err := config.LoadConfig(arg)
 			if err != nil {
 				log.Fatalln(err)
 			}
@@ -34,7 +34,13 @@ func main() {
 	}
 	config.ParseCommandLine()
 
-	verbosity := config.GetInt(config.Verbosity)
+	verbosity := 1
+	if config.GetInt(config.Verbosity) > config.GetInt(config.VerbosityShorthand) {
+		verbosity = config.GetInt(config.Verbosity)
+	} else {
+		verbosity = config.GetInt(config.VerbosityShorthand)
+	}
+
 	var level log.Level
 
 	switch verbosity {
@@ -44,7 +50,7 @@ func main() {
 		level = log.WarnLevel
 	case 2:
 		level = log.InfoLevel
-	case 3:
+	default:
 		level = log.DebugLevel
 	}
 	log.SetLevel(level)
@@ -64,7 +70,6 @@ func main() {
 	ipcFile := config.GetString(config.Socket)
 	storagePath := path.Join(workDir, dbStorage)
 	ipcPath := path.Join(workDir, ipcFile)
-
 	var db storage.DataStore
 	var err error
 	if config.GetBool(config.BerkeleyDb) {
@@ -78,19 +83,27 @@ func main() {
 	}
 	defer db.Close()
 
-	otherNodes := config.GetStringSlice(config.OtherNodes)
+	allOtherNodes := config.GetString(config.OtherNodes)
+	otherNodes := strings.Split(allOtherNodes, ",")
 	url := config.GetString(config.Url)
 	if url == "" {
 		log.Fatalln("URL must be specified")
 	}
-
+	port := config.GetInt(config.Port)
+	if port < 0 {
+		log.Fatalln("Port must be specified")
+	}
 	httpClient := &http.Client{
 		Timeout: time.Second * 10,
 	}
-	pi := api.InitPartyInfo(url, otherNodes, httpClient)
+	grpc := config.GetBool(config.UseGRPC)
 
-	privKeyFiles := config.GetStringSlice(config.PrivateKeys)
-	pubKeyFiles := config.GetStringSlice(config.PublicKeys)
+	pi := api.InitPartyInfo(url, otherNodes, httpClient, grpc)
+
+	privKeys := config.GetString(config.PrivateKeys)
+	pubKeys := config.GetString(config.PublicKeys)
+	pubKeyFiles := strings.Split(pubKeys, ",")
+	privKeyFiles := strings.Split(privKeys, ",")
 
 	if len(privKeyFiles) != len(pubKeyFiles) {
 		log.Fatalln("Private keys provided must have corresponding public keys")
@@ -108,16 +121,26 @@ func main() {
 		pubKeyFiles[i] = path.Join(workDir, keyFile)
 	}
 
-	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient)
+	enc := enclave.Init(db, pubKeyFiles, privKeyFiles, pi, http.DefaultClient, grpc)
 
 	pi.RegisterPublicKeys(enc.PubKeys)
 
-	port := config.GetInt(config.Port)
-	if port < 0 {
-		log.Fatalln("Port must be specified")
-	}
+	tls := config.GetBool(config.Tls)
+	var tlsCertFile, tlsKeyFile string
+	if tls {
+		servCert := config.GetString(config.TlsServerCert)
+		servKey := config.GetString(config.TlsServerKey)
 
-	_, err = server.Init(enc, port, ipcPath)
+		if (len(servCert) != len(servKey)) || (len(servCert) <= 0) {
+			log.Fatalf("Please provide server certificate and key for TLS %s %s %d ", servKey, servCert, len(servCert))
+		}
+
+		tlsCertFile = path.Join(workDir, servCert)
+		tlsKeyFile = path.Join(workDir, servKey)
+	}
+	grpcJsonport := config.GetInt(config.GrpcJsonPort)
+	networkInterface := config.GetString(config.NetworkInterface)
+	_, err = server.Init(enc, networkInterface, port, ipcPath, grpc, grpcJsonport, tls, tlsCertFile, tlsKeyFile)
 	if err != nil {
 		log.Fatalf("Error starting server: %v\n", err)
 	}

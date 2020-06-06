@@ -1,7 +1,5 @@
 package utils
 
-
-
 func NextPowerOf2(v int) int {
 	v--
 	v |= v >> 1

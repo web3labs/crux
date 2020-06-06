@@ -10,11 +10,12 @@ variables:
 # repository in /go/src/gitlab.com/namespace/project
 # Thus, making a symbolic link corrects this.
 before_script:
-  - apt-get update -qq && apt-get install -y -qq libdb-dev  # This is hopefully temporary until we completely remove BerkeleyDB.
+  - apt-get update -qq && apt-get install -y -qq libdb-dev libpthread-stubs0-dev # This is hopefully temporary until we completely remove BerkeleyDB.
   - mkdir -p $GOPATH/src/$(dirname $REPO_NAME)
   - ln -svf $CI_PROJECT_DIR $GOPATH/src/$REPO_NAME
   - cd $GOPATH/src/$REPO_NAME
   - go get ./...
+  - make setup
 
 stages:
     - build
@@ -25,12 +26,20 @@ format:
     script:
       - go fmt $(go list ./... | grep -v /vendor/)
       - go vet $(go list ./... | grep -v /vendor/)
-      - go test -race $(go list ./... | grep -v /vendor/)
+      - make test
 
 compile:
     stage: build
     script:
-      - go build -race -ldflags "-extldflags '-static'" -o $CI_PROJECT_DIR/crux
+      - make build
     artifacts:
       paths:
         - crux
+
+code_coverage:
+    stage: test
+    script:
+      - rm -f $GOPATH/cover/*.out $GOPATH/cover/all.merged
+      - mkdir -p $GOPATH/cover
+      - make cover
+

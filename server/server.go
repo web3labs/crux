@@ -1,22 +1,27 @@
+// Package server contains the core server components.
 package server
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strconv"
 	"github.com/blk-io/crux/api"
 	"github.com/blk-io/crux/utils"
+	"github.com/kevinburke/nacl"
 	log "github.com/sirupsen/logrus"
-	"encoding/hex"
-	"net/textproto"
+	"io/ioutil"
+	"net/http"
 	"net/http/httputil"
+	"net/textproto"
+	"os"
+	"strconv"
 )
 
+// Enclave is the interface used by the transaction enclaves.
 type Enclave interface {
 	Store(message *[]byte, sender []byte, recipients [][]byte) ([]byte, error)
+	StorePayloadGrpc(epl api.EncryptedPayload, encoded []byte) ([]byte, error)
 	StorePayload(encoded []byte) ([]byte, error)
 	Retrieve(digestHash *[]byte, to *[]byte) ([]byte, error)
 	RetrieveDefault(digestHash *[]byte) ([]byte, error)
@@ -24,9 +29,13 @@ type Enclave interface {
 	RetrieveAllFor(reqRecipient *[]byte) error
 	Delete(digestHash *[]byte) error
 	UpdatePartyInfo(encoded []byte)
+	UpdatePartyInfoGrpc(url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
 	GetEncodedPartyInfo() []byte
+	GetEncodedPartyInfoGrpc() []byte
+	GetPartyInfo() (url string, recipients map[[nacl.KeySize]byte]string, parties map[string]bool)
 }
 
+// TransactionManager is responsible for handling all transaction requests.
 type TransactionManager struct {
 	Enclave Enclave
 }
@@ -65,9 +74,21 @@ func requestLogger(handler http.Handler) http.Handler {
 	})
 }
 
-func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
-	tm := TransactionManager{Enclave : enc}
+// Init initializes a new TransactionManager instance.
+func Init(enc Enclave, networkInterface string, port int, ipcPath string, grpc bool, grpcJsonPort int, tls bool, certFile, keyFile string) (TransactionManager, error) {
+	tm := TransactionManager{Enclave: enc}
+	var err error
+	if grpc == true {
+		err = tm.startRpcServer(networkInterface, port, grpcJsonPort, ipcPath, tls, certFile, keyFile)
 
+	} else {
+		err = tm.startHttpserver(networkInterface, port, ipcPath, tls, certFile, keyFile)
+	}
+
+	return tm, err
+}
+
+func (tm *TransactionManager) startHttpserver(networkInterface string, port int, ipcPath string, tls bool, certFile, keyFile string) error {
 	httpServer := http.NewServeMux()
 	httpServer.HandleFunc(upCheck, tm.upcheck)
 	httpServer.HandleFunc(version, tm.version)
@@ -75,11 +96,22 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	httpServer.HandleFunc(resend, tm.resend)
 	httpServer.HandleFunc(partyInfo, tm.partyInfo)
 
-	serverUrl := "localhost:" + strconv.Itoa(port)
-	go func() {
-		log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
-	}()
-	log.Infof("HTTP server is running at: %s", serverUrl)
+	serverUrl := networkInterface + ":" + strconv.Itoa(port)
+	if tls {
+		err := CheckCertFiles(certFile, keyFile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		go func() {
+			log.Fatal(http.ListenAndServeTLS(serverUrl, certFile, keyFile, requestLogger(httpServer)))
+		}()
+		log.Infof("HTTPS server is running at: %s", serverUrl)
+	} else {
+		go func() {
+			log.Fatal(http.ListenAndServe(serverUrl, requestLogger(httpServer)))
+		}()
+		log.Infof("HTTP server is running at: %s", serverUrl)
+	}
 
 	// Restricted to IPC
 	ipcServer := http.NewServeMux()
@@ -92,11 +124,24 @@ func Init(enc Enclave, port int, ipcPath string) (TransactionManager, error) {
 	ipcServer.HandleFunc(delete, tm.delete)
 
 	ipc, err := utils.CreateIpcSocket(ipcPath)
+	if err != nil {
+		log.Fatalf("Failed to start IPC Server at %s", ipcPath)
+	}
 	go func() {
 		log.Fatal(http.Serve(ipc, requestLogger(ipcServer)))
 	}()
 	log.Infof("IPC server is running at: %s", ipcPath)
-	return tm, err
+
+	return err
+}
+
+func CheckCertFiles(certFile, keyFile string) error {
+	if _, err := os.Stat(certFile); os.IsNotExist(err) {
+		return err
+	} else if _, err := os.Stat(keyFile); os.IsNotExist(err) {
+		return err
+	}
+	return nil
 }
 
 func (s *TransactionManager) upcheck(w http.ResponseWriter, req *http.Request) {
@@ -164,12 +209,12 @@ func (s *TransactionManager) sendRaw(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// Uncomment the below for Quorum v2.0.2 onwards
+	// Uncomment the below for Quorum v2.0.1 or below
 	// see https://github.com/jpmorganchase/quorum/commit/ee498061b5a74bf1f3290139a53840345fa038cb#diff-63fbbd6b2c0487b8cd4445e881822cdd
-	// encodedKey := base64.StdEncoding.EncodeToString(key)
-	// fmt.Fprint(w, encodedKey)
-	// Then delete this line
-	w.Write(key)
+	//w.Write(key)
+	// Then delete the below lines
+	encodedKey := base64.StdEncoding.EncodeToString(key)
+	fmt.Fprint(w, encodedKey)
 }
 
 func (s *TransactionManager) processSend(
@@ -179,9 +224,9 @@ func (s *TransactionManager) processSend(
 	payload *[]byte) ([]byte, error) {
 
 	log.WithFields(log.Fields{
-		"b64From" : b64from,
+		"b64From":       b64from,
 		"b64Recipients": b64recipients,
-		"payload": hex.EncodeToString(*payload),}).Debugf(
+		"payload":       hex.EncodeToString(*payload)}).Debugf(
 		"Processing send request")
 
 	sender, err := base64.StdEncoding.DecodeString(b64from)
@@ -376,4 +421,3 @@ func internalServerError(w http.ResponseWriter, message string) {
 	w.WriteHeader(http.StatusInternalServerError)
 	fmt.Fprintf(w, message)
 }
-
